@@ -67,4 +67,3 @@ def california_housing_regression_results():
 
     y_pred = linear_regr.predict(X_test)
     return y_test, y_pred
-
