@@ -3,12 +3,12 @@ from setuptools import setup, find_packages
 setup(
     name="kavian",
     version="0.1.0",
-    author="Your Name",
-    author_email="your.email@example.com",
-    description="A brief description of your package",
+    author="Adam Torres Encarnacion",
+    author_email="art5809@psu.edu",
+    description="Extends Pandas and Scikit with tools for Advanced Statistical Analysis",
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/my_package",
+    url="https://github.com/AdamPSU/Kavian",
     packages=find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -17,7 +17,6 @@ setup(
     ],
     python_requires='>=3.6',
     install_requires=[
-        # List your package dependencies here
-        # e.g., 'numpy', 'pandas',
+        'numpy', 'pandas', 'scikit-learn', 'rich', 'pytest'
     ],
 )
