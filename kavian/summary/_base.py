@@ -19,14 +19,34 @@ from sklearn.metrics import (
     roc_auc_score
 )
 
+from sklearn.base import ClassifierMixin, RegressorMixin
 
-def get_summary(estimator, X, y):
+
+def _get_summary(estimator, X, y):
     """Factory function to return appropriate summary object."""
-    pass
+
+    if isinstance(estimator, ClassifierMixin):
+        return BaseClassifierSummary(estimator, X, y)
+    elif isinstance(estimator, RegressorMixin):
+        return BaseRegressorSummary(estimator, X, y)
+    else:
+        raise ValueError(f"Estimator must be either a classifier or a regressor, got {type(estimator).__name__} instead.")
 
 
 def summary(estimator, X, y):
-    pass
+    """
+    Summarize a fitted Scikit-Learn model.
+
+    Supported models include:
+
+    - Linear Models
+    - Binary Classification Models
+
+    And more on the way.
+    """
+    summ = _get_summary(estimator, X, y)
+
+    return summ.summary()
 
 
 class BaseSummary(ABC):
@@ -40,7 +60,6 @@ class BaseSummary(ABC):
         self.X = X
         self.y = y
 
-        self.params = estimator.get_params()
         self.n, self.p = X.shape[0], X.shape[1]
 
         self.layout = Layout()
@@ -172,20 +191,30 @@ class BaseRegressorSummary(BaseSummary):
     def get_aic(self):
         """Returns the Akaike Information Criterion."""
 
-        predictors_plus_intercept = self.p + 1
+        num_of_params = self.p
+        has_intercept = self.estimator.fit_intercept
+
+        if has_intercept:
+            num_of_params += 1
+
         log_likelihood = self.get_log_likelihood()
 
-        aic = (2 * predictors_plus_intercept) - (2 * log_likelihood)
+        aic = (2 * num_of_params) - (2 * log_likelihood)
         return aic
 
 
     def get_bic(self):
         """Returns the Bayesian Information Criterion."""
 
-        predictors_plus_intercept = self.p + 1
+        num_of_params = self.p
+        has_intercept = self.estimator.fit_intercept
+
+        if has_intercept:
+            num_of_params += 1
+
         log_likelihood = self.get_log_likelihood()
 
-        bic = (np.log(self.n) * predictors_plus_intercept) - (2 * log_likelihood)
+        bic = (np.log(self.n) * num_of_params) - (2 * log_likelihood)
         return bic
 
 

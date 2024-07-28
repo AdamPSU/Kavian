@@ -7,7 +7,7 @@ from sklearn.linear_model import (
     LogisticRegression
 )
 
-from kavian.linear_model.summary import (
+from kavian.summary._base import (
     BaseSummary,
     BaseRegressorSummary,
     BaseClassifierSummary
@@ -42,7 +42,6 @@ def test_compatibility(get_diabetes, get_breast_cancer):
         BaseClassifierSummary(logistic_classifier, pandas_X, pandas_y)
     except Exception as e:
         pytest.fail(f"Compatibility Error: {e}")
-
 
 
 def test_model_fitted(get_diabetes):
