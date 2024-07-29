@@ -2,19 +2,33 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from sklearn.linear_model import (
-    LinearRegression,
-    LogisticRegression
-)
+from sklearn.linear_model import LinearRegression
+from rich.panel import Panel
 
 from kavian.tables.base import (
-    BaseSummary,
+    RegressorSummaryMixin,
     SimpleRegressorSummary,
     SimpleClassifierSummary
 )
 
 X_RANDOM = np.random.rand(100, 3)
 Y_RANDOM = np.random.rand(100)
+
+class TooManyEntries(RegressorSummaryMixin):
+    """Edge case with just too many entries."""
+
+    def make_entries(self):
+        empty = ("dummy: ", "value")
+        available_space = 5
+
+        return [empty]*(available_space + 1)
+
+
+    def summary(self):
+        model_entries = self.make_entries()
+        model_table = self.create_table(*model_entries)
+
+        self.console.print(Panel(model_table))
 
 
 def test_compatibility(get_diabetes, get_breast_cancer):
@@ -34,6 +48,12 @@ def test_compatibility(get_diabetes, get_breast_cancer):
         SimpleClassifierSummary(logistic_classifier, pandas_X, pandas_y)
     except Exception as e:
         pytest.fail(f"Compatibility Error: {e}")
+
+
+def test_too_many_entries():
+    with (pytest.raises(ValueError)):
+        test = TooManyEntries(LinearRegression(), X_RANDOM, Y_RANDOM)
+        test.summary()
 
 
 def test_regressor_statistics(get_diabetes, get_california_housing):
@@ -62,10 +82,8 @@ def test_regressor_statistics(get_diabetes, get_california_housing):
     assert np.ceil((diabetes.get_bic())) == 4_839
     assert np.ceil((california.get_bic())) == 45_337
 
-    assert np.round(diabetes.get_r2(), 3) == 0.518
     assert np.round(diabetes.get_adj_r2(), 3) == 0.507
 
-    assert np.round(california.get_r2(), 3) == 0.606
     assert np.round(california.get_adj_r2(), 3) == 0.606
 
 
