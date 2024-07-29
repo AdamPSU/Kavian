@@ -7,6 +7,8 @@ from rich.console import Console
 from rich.layout import Layout
 from rich.panel import Panel
 from rich.table import Table
+from rich.style import Style
+from rich.text import Text
 
 from sklearn.metrics import (
     r2_score,
@@ -19,6 +21,7 @@ from sklearn.metrics import (
     roc_auc_score
 )
 
+SEPARATOR = Text("-"*15, style=Style(color="red", bold=True))
 
 def _add_empty_columns():
     model_table = Table(show_header=True, box=None, style="bold", expand=True)
@@ -32,10 +35,39 @@ def _add_empty_columns():
     return model_table
 
 
+def include_new_entries(entries, available_space):
+    """
+    Takes subclass model statistics and prepares them for summary inclusion.
+
+    Parameters:
+    - model_entries (list of tuples): Entries to be used for analysis.
+    - available_space (int): The maximum number of entries that can be accommodated.
+                             This number varies by model type.
+
+    Raises:
+    - ValueError: If the number of entries exceeds available space.
+    """
+
+    # Initialize a list with no entries
+    empty = ("", "")
+    default = [empty] * available_space
+
+    if len(entries) > available_space:
+        raise ValueError(
+            f"Too many entries provided. Expected at most {available_space} entries, "
+            f"but got {len(entries)} instead."
+        )
+
+    for idx in range(len(entries)):
+        default[idx] = entries[idx]
+
+    return default
+
+
 class BaseSummary:
     """
     Base class for summaries; contains basic information relevant
-    to any tables process.
+    to any summary process.
     """
 
     def __init__(self, estimator, X, y):
@@ -50,7 +82,7 @@ class BaseSummary:
 
 
     def get_pred(self):
-        """Return prediction on data matrix X"""
+        """Return predictions on data matrix X"""
 
         y_pred = self.estimator.predict(self.X)
 
@@ -68,28 +100,33 @@ class RegressorSummaryMixin(BaseSummary, ABC):
         """Summarize Model."""
 
 
+    @abstractmethod
+    def make_entries(self):
+        """Create new entries not supported by this mixin."""
+
+
     def process_summary_info(self):
         """
-        Retrieves information necessary to make basic regression tables. This
-        method is meant to be reimplemented/extended by subclasses.
+        Retrieves and prepares information for generating basic regression tables.
 
-        Default statistics provided include:
+        This method is intended to be overridden or extended by subclasses to provide
+        specific regression summaries. The default statistics included in the summary are:
 
-        - model : name of the estimator
-        - date : time the tables was obtained in {month day, year} format
-        - endog : response, or target value
-        - num_observ : number of rows present in data matrix X
-        - num_features : number of columns present in data matrix X
-        - r2 : total variance explained by the model, goodness-of-fit estimate
-        - adj. r2 : total variance explained by the model,
-                    taking number of predictors into account
-        - log_likely : log likelihood, also a goodness-of-fit estimate
-        - aic : akaike information criterion
-        - bic : bayesian information criterion
-        - mae : mean absolute error for data matrix X
-        - rmse : root mean squared error for data matrix X
+        - **model**: Name of the estimator used.
+        - **date**: Date when the summary was generated, formatted as {Month Day, Year}.
+        - **endog**: Response variable or target value used in the regression.
+        - **num_observ**: Number of observations (rows) in the data matrix X.
+        - **num_features**: Number of features (columns) in the data matrix X.
+        - **r2**: R-squared, representing the proportion of variance explained by the model.
+        - **adj_r2**: Adjusted R-squared, accounting for the number of predictors.
+        - **log_likely**: Log-likelihood, a measure of model fit.
+        - **aic**: Akaike Information Criterion, used for model comparison.
+        - **bic**: Bayesian Information Criterion, used for model comparison.
+        - **mae**: Mean Absolute Error (MAE) of the predictions.
+        - **rmse**: Root Mean Squared Error (RMSE) of the predictions.
 
-        :return: regression summary dict
+        :return: dict:
+            A dictionary containing the regression summary statistics.
         """
 
         model_name = type(self.estimator).__name__
@@ -123,14 +160,20 @@ class RegressorSummaryMixin(BaseSummary, ABC):
         return summary_dict
 
 
-    def create_table(self, extra=None):
+    def create_table(self, *model_entries):
         """
-        Basic regression table. This method is meant to be
-        reimplemented by subclasses.
+        Generates a basic regression table. This method is designed to be overridden
+        by subclasses to provide specific implementations.
 
-        Parameters include:
+        The regression table includes various statistics and metrics related to the
+        regression analysis. The specific entries and their contents should
+        be detailed in the subclass implementation.
 
-        extra : list of tuples containing additional rows
+        Parameters:
+        - (Specify any new entries used by the subclass implementation, if applicable)
+
+        :return: Table
+            A rich Table object containing the regression table with relevant statistics.
         """
 
         model_table = _add_empty_columns()
@@ -145,17 +188,25 @@ class RegressorSummaryMixin(BaseSummary, ABC):
         model_table.add_row("Dep. Variable: ", summary_dict["Endogenous Variable"],
                             "BIC: ", summary_dict["BIC"])
         model_table.add_row("No. Observations: ", summary_dict["Number of Observations"],
-                            "MAE: ", summary_dict["MAE"])
-        model_table.add_row("No. Features: ", summary_dict["Number of Features"],
-                            "RMSE: ", summary_dict["RMSE"])
+                            SEPARATOR)
 
-        if not extra:
-            extra = [("", ""), ("", "")]
+        entries = include_new_entries(model_entries, available_space=5)
+
+        (custom_entry_1, custom_value_1), (custom_entry_2, custom_value_2), \
+        (custom_entry_3, custom_value_3), (custom_entry_4, custom_value_4), \
+        (custom_entry_5, custom_value_5) = entries
+
+        model_table.add_row("No. Features: ", summary_dict["Number of Features"],
+                            custom_entry_1, custom_value_1)
 
         model_table.add_row("R²: ", summary_dict["R-squared"],
-                            extra[0][0], extra[0][1])
+                            custom_entry_2, custom_value_2)
         model_table.add_row("Adj. R²: ", summary_dict["Adjusted R-squared"],
-                            extra[1][0], extra[1][1])
+                            custom_entry_3, custom_value_3)
+        model_table.add_row("MAE: ", summary_dict["MAE"],
+                            custom_entry_4, custom_value_4)
+        model_table.add_row("RMSE: ", summary_dict["RMSE"],
+                            custom_entry_5, custom_value_5)
 
         return model_table
 
@@ -215,12 +266,10 @@ class RegressorSummaryMixin(BaseSummary, ABC):
         return bic
 
 
-class SimpleRegressorSummary(RegressorSummaryMixin):
-    def summary(self):
+    def get_skewness(self):
+        """Retrieves skewness for response vector y."""
 
-        model_table = super().create_table()
-
-        self.console.print(Panel(model_table, title="Simple Regression Results"))
+        pass
 
 
 class ClassifierSummaryMixin(BaseSummary, ABC):
@@ -229,27 +278,35 @@ class ClassifierSummaryMixin(BaseSummary, ABC):
         """Summarize Model."""
 
 
+    @abstractmethod
+    def make_entries(self):
+        """Create new entries not supported by this mixin."""
+
+
     def process_summary_info(self):
         """
-        Retrieves information necessary to make basic classification tables. This
-        method is meant to be reimplemented/extended by subclasses.
+        Retrieves information necessary for generating basic classification tables.
+        This method is intended to be overridden or extended by subclasses to provide
+        specific implementations.
 
-        Default statistics provided include:
+        The default statistics provided include:
 
-        - model : name of the estimator
-        - date : time the tables was obtained in {month day, year} format
-        - time : precise time, in {hour : minutes : seconds} format
-        - endog : response, or target value
-        - num_observ : number of rows present in data matrix X
-        - num_features : number of columns present in data matrix X
-        - accuracy : proportion of correctly classified instances out of the total number of instances
-        - precision : proportion of positive predictions that were actually positive
-        - recall : proportion of actual positives that were correctly predicted
-        - f1_score : Harmonic mean of precision and recall
-        - roc_auc_score : Area under the receiver operating characteristic curve,
-                          useful for binary classification problems
-        :return:
+        - **model**: Name of the estimator used for classification.
+        - **date**: Date when the summary was generated, formatted as {Month Day, Year}.
+        - **time**: Precise time when the summary was generated, formatted as {Hour:Minutes:Seconds}.
+        - **endog**: Response variable or target value used in the classification.
+        - **num_observ**: Number of observations (rows) in the data matrix X.
+        - **num_features**: Number of features (columns) in the data matrix X.
+        - **accuracy**: Proportion of correctly classified instances out of the total number of instances.
+        - **precision**: Proportion of positive predictions that were actually positive.
+        - **recall**: Proportion of actual positives that were correctly predicted.
+        - **f1_score**: Harmonic mean of precision and recall, providing a single metric that balances both.
+        - **roc_auc_score**: Area under the Receiver Operating Characteristic (ROC) curve, useful for evaluating binary classification performance.
+
+        :return: dict:
+            A dictionary containing the classification summary statistics.
         """
+
         model_name = type(self.estimator).__name__
         date = pd.Timestamp.now().normalize().strftime('%B %d, %Y')
 
@@ -278,14 +335,20 @@ class ClassifierSummaryMixin(BaseSummary, ABC):
         return summary_dict
 
 
-    def create_table(self, extra=None):
+    def create_table(self, *model_entries):
         """
-        Basic summary table. This method is meant to be
-        reimplemented by subclasses.
+        Generates a basic classification table. This method is designed to be overridden
+        by subclasses to provide specific implementations.
 
-        Parameters include:
+        The classification table includes various statistics and metrics related to the
+        classification analysis. The specific entries and their contents should
+        be detailed in the subclass implementation.
 
-        extra : list of tuples containing additional rows
+        Parameters:
+        - (Specify any new entries used by the subclass implementation, if applicable)
+
+        :return: Table:
+            A rich Table object containing the classification table with relevant statistics.
         """
 
         model_table = _add_empty_columns()
@@ -299,18 +362,20 @@ class ClassifierSummaryMixin(BaseSummary, ABC):
                             "ROC-AUC: ", summary_dict["ROC AUC Score"])
         model_table.add_row("No. Classes", summary_dict["Number of Classes"],
                             "Accuracy: ", summary_dict["Accuracy"])
-
-        if not extra:
-            extra = [("", ""), ("", ""), ("", ""), ("", "")]
-
         model_table.add_row("No. Observations: ", summary_dict["Number of Observations"],
-                            extra[0][0], extra[0][1])
+                            SEPARATOR)
+
+        entries = include_new_entries(entries=model_entries, available_space=3)
+
+        (custom_entry_1, custom_value_1), (custom_entry_2, custom_value_2), \
+        (custom_entry_3, custom_value_3) = entries
+
         model_table.add_row("No. Features: ", summary_dict["Number of Features"],
-                            extra[1][0], extra[0][1])
+                            custom_entry_1, custom_value_1)
         model_table.add_row("Precision: ", summary_dict["Precision"],
-                            extra[2][0], extra[0][1])
+                            custom_entry_2, custom_value_2)
         model_table.add_row("Recall: ", summary_dict["Recall"],
-                            extra[3][0], extra[0][1])
+                            custom_entry_3, custom_value_3)
 
         return model_table
 
@@ -323,10 +388,26 @@ class ClassifierSummaryMixin(BaseSummary, ABC):
         return num_classes
 
 
-class SimpleClassifierSummary(ClassifierSummaryMixin):
-    def summary(self):
+class SimpleRegressorSummary(RegressorSummaryMixin):
+    def make_entries(self):
+        return []
 
-        model_table = super().create_table()
+
+    def summary(self):
+        model_entries = self.make_entries()
+        model_table = self.create_table(*model_entries)
+
+        self.console.print(Panel(model_table, title="Simple Regression Results"))
+
+
+class SimpleClassifierSummary(ClassifierSummaryMixin):
+    def make_entries(self):
+        return []
+
+
+    def summary(self):
+        model_entries = self.make_entries()
+        model_table = self.create_table(*model_entries)
 
         self.console.print(Panel(model_table, title="Classification Results"))
 

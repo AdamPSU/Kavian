@@ -5,7 +5,9 @@ from sklearn.base import ClassifierMixin, RegressorMixin
 MODEL_MAPPING = {
     "Lasso": "Regularization",
     "Ridge": "Regularization",
-    "ElasticNet": "Regularization"
+    "ElasticNet": "Regularization",
+    "LassoLars": "Regularization",
+    "LassoLarsIC": "Regularization"
 }
 
 def _get_summary(estimator, X, y):

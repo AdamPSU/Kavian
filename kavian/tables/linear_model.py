@@ -9,12 +9,16 @@ from rich.table import Table
 from kavian.tables.base import RegressorSummaryMixin, ClassifierSummaryMixin
 
 class RegularizedRegressionSummary(RegressorSummaryMixin):
-    def summary(self):
-        penalty = self.get_penalty()
-        zeros = str(self.get_zero_coefficients())
+    def make_entries(self):
+        penalty = ("Penalty: ", self.get_penalty())
+        zeros = ("Sparse Features: ", str(self.get_zero_coefficients()))
 
-        model_table = self.create_table([("Penalty: ", penalty),
-                                         ("Zero Coefficients: ", zeros)])
+        return [penalty, zeros]
+
+
+    def summary(self):
+        model_entries = self.make_entries()
+        model_table = self.create_table(*model_entries)
 
         self.console.print(Panel(model_table, title="Regularized Regression Results"))
 
