@@ -11,9 +11,6 @@ from rich.style import Style
 from rich.text import Text
 
 from sklearn.metrics import (
-    r2_score,
-    mean_absolute_error,
-    root_mean_squared_error,
     accuracy_score,
     precision_score,
     recall_score,
@@ -22,6 +19,7 @@ from sklearn.metrics import (
 )
 
 SEPARATOR = Text("-"*15, style=Style(color="red", bold=True))
+TABLE_LENGTH = 79
 
 def _add_empty_columns():
     model_table = Table(show_header=True, box=None, style="bold", expand=True)
@@ -40,7 +38,7 @@ def include_new_entries(entries, available_space):
     Takes subclass model statistics and prepares them for summary inclusion.
 
     Parameters:
-    - model_entries (list of tuples): Entries to be used for analysis.
+    - entries (list of tuples): Entries to be used for analysis.
     - available_space (int): The maximum number of entries that can be accommodated.
                              This number varies by model type.
 
@@ -95,6 +93,13 @@ class RegressorSummaryMixin(BaseSummary, ABC):
     information relevant to all regression models.
     """
 
+    def __init__(self, estimator, X, y):
+        super().__init__(estimator, X, y)
+
+        self.resid = self.y - self.get_pred()
+        self.squared_resid = self.resid**2
+        self.rss = self.get_rss()
+
     @abstractmethod
     def summary(self):
         """Summarize Model."""
@@ -103,6 +108,11 @@ class RegressorSummaryMixin(BaseSummary, ABC):
     @abstractmethod
     def make_entries(self):
         """Create new entries not supported by this mixin."""
+
+
+    def make_model_diagnostic(self):
+        print(f"Skew: {self.get_skew():.3f} • Cond. No. {self.get_cond_no():.2e} • "
+              f"Durbin-Watson: {self.get_durbin_watson():.3f}".center(TABLE_LENGTH))
 
 
     def process_summary_info(self):
@@ -135,12 +145,12 @@ class RegressorSummaryMixin(BaseSummary, ABC):
         endog = self.y.name if hasattr(self.y, 'name') else "Unknown"
         num_observ, num_features = str(self.n), str(self.p)
 
-        r2 =f"{r2_score(self.y, self.get_pred()):.3f}"
+        r2 =f"{self.get_r2():.3f}"
         adj_r2 = f"{self.get_adj_r2():.3f}"
         llh = f"{self.get_log_likelihood():.3f}"
         aic, bic = f"{self.get_aic():.3f}", f"{self.get_bic():.3f}"
-        mae = f"{mean_absolute_error(self.y, self.get_pred()):.3f}"
-        rmse = f"{root_mean_squared_error(self.y, self.get_pred()):.3f}"
+        mae = f"{self.get_mae():.3f}"
+        rmse = f"{self.get_rmse():.3f}"
 
         summary_dict = {
             "Model Name": model_name,
@@ -198,7 +208,6 @@ class RegressorSummaryMixin(BaseSummary, ABC):
 
         model_table.add_row("No. Features: ", summary_dict["Number of Features"],
                             custom_entry_1, custom_value_1)
-
         model_table.add_row("R²: ", summary_dict["R-squared"],
                             custom_entry_2, custom_value_2)
         model_table.add_row("Adj. R²: ", summary_dict["Adjusted R-squared"],
@@ -214,18 +223,47 @@ class RegressorSummaryMixin(BaseSummary, ABC):
     def get_rss(self):
         """Retrieve Residual Sum of Squares."""
 
-        rss = np.sum((self.y - self.get_pred())**2)
+        rss = np.sum(self.squared_resid)
 
         return rss
 
 
-    def get_adj_r2(self):
-        """Returns Adjusted R²"""
+    def get_r2(self):
+        """Returns R²."""
 
-        r2 = r2_score(self.y, self.get_pred())
+        rss = self.get_rss()
+        tss = np.sum((self.y - np.mean(self.y))**2)
+
+        r2 = 1 - rss/tss
+
+        return r2
+
+
+    def get_adj_r2(self):
+        """Returns Adjusted R²."""
+
+        r2 = self.get_r2()
         adj_r2 = 1 - (1 - r2) * ((self.n - 1) / (self.n - self.p - 1))
 
         return adj_r2
+
+
+    def get_rmse(self):
+        """Returns Root Mean Squared Error."""
+
+        mse = np.mean(self.squared_resid)
+        rmse = np.sqrt(mse)
+
+        return rmse
+
+
+    def get_mae(self):
+        """Returns Mean Absolute Error."""
+
+        abs_resid = np.abs(self.resid)
+        mae = np.mean(abs_resid)
+
+        return mae
 
 
     def get_log_likelihood(self):
@@ -266,9 +304,44 @@ class RegressorSummaryMixin(BaseSummary, ABC):
         return bic
 
 
-    def get_skewness(self):
-        """Retrieves skewness for response vector y."""
+    def get_skew(self):
+        """
+        Calculate the skewness of the residuals from a fitted regression model.
 
+        Returns:
+            float: The skewness of the residuals.
+        :return:
+        """
+
+        bias_corrector = self.n/((self.n - 1)*(self.n - 2))
+
+        resid_mean = self.resid.mean()
+        resid_stdev = self.resid.std(ddof=1)
+        standardized_resid = (self.resid - resid_mean) / resid_stdev
+
+        skewness = bias_corrector * np.sum(standardized_resid**3)
+
+        return skewness
+
+
+    def get_cond_no(self):
+        """Returns the Condition Number of data matrix X"""
+
+        cond_no = np.linalg.cond(self.X)
+
+        return cond_no
+
+
+    def get_durbin_watson(self):
+        """Returns Durbin-Watson test for Autocorrelation"""
+
+        resid_diff = np.diff(self.resid, 1, 0)
+        durbin_watson = (np.sum(resid_diff**2))/self.rss
+
+        return durbin_watson
+
+
+    def get_f_value(self):
         pass
 
 
@@ -397,7 +470,9 @@ class SimpleRegressorSummary(RegressorSummaryMixin):
         model_entries = self.make_entries()
         model_table = self.create_table(*model_entries)
 
-        self.console.print(Panel(model_table, title="Simple Regression Results"))
+        self.console.print(Panel(model_table, title="Simple Regression Results",
+                                 subtitle="Model Diagnostics"))
+        self.make_model_diagnostic()
 
 
 class SimpleClassifierSummary(ClassifierSummaryMixin):
@@ -409,7 +484,8 @@ class SimpleClassifierSummary(ClassifierSummaryMixin):
         model_entries = self.make_entries()
         model_table = self.create_table(*model_entries)
 
-        self.console.print(Panel(model_table, title="Classification Results"))
+        self.console.print(Panel(model_table, title="Classification Results",
+                                 subtitle="Model Diagnostics"))
 
 
 
