@@ -11,20 +11,18 @@ various aspects of regression models, such as:
 
 import numpy as np
 
-class RegressionStatistics:
-    def __init__(self, X, y, y_pred, intercept=True):
-        self.X, self.y, self.y_pred = np.array(X), np.array(y), np.array(y_pred)
-        self.intercept = intercept
+class RegressorStatistics:
+    def __init__(self, estimator, X, y):
+        self.X, self.y = np.array(X), np.array(y)
+        self.intercept = estimator.intercept_
+
+        self.y_pred = estimator.predict(X)
+        self.resid = self.y - self.y_pred
+        self.squared_resid = self.resid**2
+        self.rss = np.sum(self.squared_resid)
+        self.tss = np.sum((self.y - self.y.mean())**2)
 
         self.n, self.p = X.shape[0], X.shape[1]
-
-        self.resid = self.y - self.y_pred
-        self.y_centered = self.y - np.mean(self.y)
-
-        self.squared_resid = self.resid**2
-
-        self.rss = np.sum(self.squared_resid)
-        self.tss = np.sum(self.y_centered**2)
 
 
     def rss(self):

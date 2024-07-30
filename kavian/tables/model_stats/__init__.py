@@ -1,5 +1,5 @@
-from kavian.tables.model_stats.regr_stats import RegressionStatistics
+from kavian.tables.model_stats.regr_stats import RegressorStatistics
 
 __all__ = [
-    'RegressionStatistics'
+    'RegressorStatistics'
 ]

@@ -1,4 +1,4 @@
-from kavian.tables.base import SimpleClassifierSummary, SimpleRegressorSummary
+from kavian.tables.base import SimpleRegressorSummary
 from kavian.tables.linear_model import RegularizedRegressionSummary
 from sklearn.base import ClassifierMixin, RegressorMixin
 
