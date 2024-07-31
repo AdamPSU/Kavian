@@ -10,16 +10,12 @@ from kavian.tables.model_stats import RegressorStatistics
 from kavian.tables.utils import format_stat, format_scientific_notation
 from kavian.tables.config import TABLE_LENGTH, SEPARATOR
 
-def _add_empty_columns():
-    model_table = Table(show_header=True, box=None, style="bold", expand=True)
-
+def _add_empty_columns(table):
     empty_column = ""
-    model_table.add_column(empty_column)
-    model_table.add_column(empty_column, justify="right")
-    model_table.add_column(empty_column)
-    model_table.add_column(empty_column, justify="right")
-
-    return model_table
+    table.add_column(empty_column)
+    table.add_column(empty_column, justify="right")
+    table.add_column(empty_column)
+    table.add_column(empty_column, justify="right")
 
 
 def include_new_entries(entries, available_space):
@@ -35,9 +31,8 @@ def include_new_entries(entries, available_space):
     - ValueError: If the number of entries exceeds available space.
     """
 
-    # Initialize a list with no entries
     empty = ("", "")
-    default = [empty] * available_space
+    default = [empty] * available_space # Initialize a list with no entries
 
     if len(entries) > available_space:
         raise ValueError(
@@ -52,10 +47,7 @@ def include_new_entries(entries, available_space):
 
 
 class BaseRegressorSummary(ABC):
-    """
-    Base class for regression summaries; contains basic
-    information relevant to all regression models.
-    """
+    """Base class for regression summaries. All regression summaries inherit this."""
 
     def __init__(self, estimator, X, y):
         self.estimator = estimator
@@ -72,15 +64,24 @@ class BaseRegressorSummary(ABC):
 
 
     def make_entries(self):
-        """Create new entries not included in this Mixin."""
+        """Create new (key, value) entries. This method is designed to be overridden
+        by subclasses to provide specific implementation."""
 
         return []
 
 
     def print_model_diagnostic(self):
-        skew = format_stat(self.stats.skew())
-        cond_no = format_scientific_notation(self.stats.cond_no())
-        durbin_watson = format_stat(self.stats.durbin_watson())
+        """
+        Print test diagnostics below the regression summary. Currently, this method supports
+        basic asssumption tests pertinent to residual analysis, and is designed to be overriden
+        by subclasses to provide specific implementation.
+        """
+
+        stats = self.stats
+
+        skew = format_stat(stats.skew())
+        cond_no = format_scientific_notation(stats.cond_no())
+        durbin_watson = format_stat(stats.durbin_watson())
 
         print(f"Skew: {skew} • Cond. No. {cond_no} • Durbin-Watson: {durbin_watson}".center(TABLE_LENGTH))
 
@@ -95,27 +96,30 @@ class BaseRegressorSummary(ABC):
         be detailed in the subclass implementation.
 
         Parameters:
-        - (Specify any new entries used by the subclass implementation, if applicable)
+        - (Specify any new entries used by the subclass implementation, as long as they don't
+           exceed the available space provided in the table)
 
         :return: Table
             A rich Table object containing the regression table with relevant statistics.
         """
 
-        info = self.stats
-        model_table = _add_empty_columns()
+        stats = self.stats
+
+        model_table = Table(show_header=True, box=None, style="bold", expand=True)
+        _add_empty_columns(model_table)
 
         # Format statistics
-        log_likelihood = format_stat(info.log_likelihood())
-        aic = format_stat(info.aic())
-        bic = format_stat(info.bic())
-        r2 = format_stat(info.r2())
-        adj_r2 = format_stat(info.adj_r2())
-        mae = format_stat(info.mae())
-        rmse = format_stat(info.rmse())
+        log_likelihood = format_stat(stats.log_likelihood())
+        aic = format_stat(stats.aic())
+        bic = format_stat(stats.bic())
+        r2 = format_stat(stats.r2())
+        adj_r2 = format_stat(stats.adj_r2())
+        mae = format_stat(stats.mae())
+        rmse = format_stat(stats.rmse())
 
         # Other
-        num_obs = str(info.n)
-        num_features = str(info.p)
+        num_obs = str(stats.n)
+        num_features = str(stats.p)
         
         # add_row() accepts 4 renderables, note that the 3rd and 4th
         # are reserved for the second column and are otherwise left empty
@@ -162,11 +166,12 @@ class BaseRegressorSummary(ABC):
         """Returns the name of the response variable y."""
 
         y_name = self.y.name if hasattr(self.y, 'name') else 'NaN'
+
         return y_name
 
 
     def model_name(self):
-        """Returns the estimator's name."""
+        """Returns the model's name."""
 
         model_name = type(self.estimator).__name__
 
@@ -182,11 +187,16 @@ class BaseRegressorSummary(ABC):
 
 
 class SimpleRegressorSummary(BaseRegressorSummary):
+    """
+    Simple summary table displaying useful statistics
+    for Linear Regression models.
+    """
+
     def summary(self):
         model_entries = self.make_entries()
         model_table = self.create_table(*model_entries)
 
-        self.console.print(Panel(model_table, title="Simple Regression Results",
+        self.console.print(Panel(model_table, title="Regression Results",
                                  subtitle="Test Diagnostics"))
         self.print_model_diagnostic()
 
