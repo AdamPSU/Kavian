@@ -40,13 +40,21 @@ class RegressorStatistics:
     def r2(self):
         """Returns R-squared"""
 
-        return 1 - self.rss / self.tss
+        r2 = 1 - self.rss / self.tss
+
+        return r2
 
 
     def adj_r2(self):
         """Returns Adjusted R-squared"""
 
-        adj_r2 = 1 - (1 - self.r2()) * (self.n - 1) / (self.n - self.p - 1)
+        constant = 0
+        has_intercept = self.intercept
+
+        if has_intercept:
+            constant = 1
+
+        adj_r2 = 1 - (self.n + constant - 1) / (self.n - self.p - 1) * (1 - self.r2())
 
         return adj_r2
 
@@ -107,7 +115,18 @@ class RegressorStatistics:
 
 
     def skew(self):
-        """Returns skew."""
+        """
+        Calculate and return the skewness of the residuals from the regression model.
+
+        Skewness measures the asymmetry of the distribution of residuals. It indicates
+        whether the residuals are skewed to the left or right of the mean.
+        - A skewness of 0 indicates a symmetric distribution.
+        - A positive skewness indicates a distribution with a long right tail.
+        - A negative skewness indicates a distribution with a long left tail.
+
+        Returns:
+            np.float: The skewness of the residuals.
+        """
 
         bias_corrector = self.n/((self.n - 1)*(self.n - 2))
 
@@ -121,15 +140,59 @@ class RegressorStatistics:
 
 
     def cond_no(self):
-        """Returns the Condition Number of data matrix X"""
+        """
+        Calculate and return the Condition Number of the data matrix X.
+
+        The Condition Number is a measure of the sensitivity of a model to new
+        data. It is used to diagnose multicollinearity in regression analysis.
+        A high Condition Number indicates that the matrix is close to being singular,
+        which can lead to numerical instability and unreliable results in computations.
+
+        Returns:
+            np.float: The Condition Number of the data matrix X.
+        """
 
         cond_no = np.linalg.cond(self.X)
 
         return cond_no
 
 
+    def breusch_pagan_pvalue(self):
+        """
+        Calculate and return the p-value of the Breusch-Pagan test for heteroscedasticity.
+
+        The Breusch-Pagan test is used to detect the presence of heteroscedasticity
+        in a regression model, where the variance of the residuals is not constant.
+        A low p-value (for us, 0.05) indicates the presence of heteroscedasticity.
+
+        Returns:
+            np.float: The p-value of the Breusch-Pagan test.
+        """
+
+        # TODO: reimplement this method from scratch to avoid having to fit another regression model
+
+        import statsmodels.api as sm
+        from statsmodels.stats.diagnostic import het_breuschpagan
+
+        X_with_constant = sm.add_constant(self.X)
+        _, bp_pval, _, _ = het_breuschpagan(resid=self.resid, exog_het=X_with_constant)
+
+        return bp_pval
+
+
     def durbin_watson(self):
-        """Returns Durbin-Watson test for Autocorrelation"""
+        """
+        Calculate and return the Durbin-Watson statistic for detecting autocorrelation
+        in the residuals of a linear regression model.
+
+        The Durbin-Watson statistic ranges from 0 to 4, where:
+        - A value near 2 indicates no autocorrelation.
+        - A value toward 0 suggests positive autocorrelation.
+        - A value toward 4 suggests negative autocorrelation.
+
+        Returns:
+        np.float: The Durbin-Watson statistic.
+        """
 
         resid_diff = np.diff(self.resid, 1, 0)
         durbin_watson = (np.sum(resid_diff**2))/self.rss

@@ -1,6 +1,6 @@
-from abc import ABC, abstractmethod
-
 import pandas as pd
+
+from abc import ABC, abstractmethod
 
 from rich.console import Console
 from rich.panel import Panel
@@ -83,7 +83,11 @@ class BaseRegressorSummary(ABC):
         cond_no = format_scientific_notation(stats.cond_no())
         durbin_watson = format_stat(stats.durbin_watson())
 
-        print(f"Skew: {skew} • Cond. No. {cond_no} • Durbin-Watson: {durbin_watson}".center(TABLE_LENGTH))
+        # Breusch-Pagan test
+        bp_pval = format_stat(stats.breusch_pagan_pvalue())
+
+        print(f"Skew: {skew} • Breusch-Pagan p-val: {bp_pval} • Durbin-Watson: {durbin_watson}"
+              f" • Cond. No. {cond_no}".center(TABLE_LENGTH))
 
 
     def create_table(self, *model_entries):
@@ -186,6 +190,16 @@ class BaseRegressorSummary(ABC):
         return date
 
 
+class BaseClassifierSummary(ABC):
+    def __init__(self, estimator, X, y):
+        self.estimator = estimator
+        self.X = X
+        self.y = y
+
+        self.stats = RegressorStatistics(self.estimator, self.X, self.y)
+        self.console = Console()
+
+
 class SimpleRegressorSummary(BaseRegressorSummary):
     """
     Simple summary table displaying useful statistics
@@ -199,6 +213,8 @@ class SimpleRegressorSummary(BaseRegressorSummary):
         self.console.print(Panel(model_table, title="Regression Results",
                                  subtitle="Test Diagnostics"))
         self.print_model_diagnostic()
+
+
 
 
 

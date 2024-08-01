@@ -1,4 +1,3 @@
-import pandas as pd
 import numpy as np
 
 from rich.panel import Panel
@@ -15,18 +14,22 @@ class RegularizedRegressionSummary(BaseRegressorSummary):
 
 
     def make_entries(self):
-        penalty = ("Penalty: ", self.penalty())
+        penalty = ("Penalty: ", self.norm())
         sparse_coefs = ("Sparse Features: ", str(self.sparse_coefficients()))
 
         return [penalty, sparse_coefs]
 
 
-    def penalty(self):
+    def norm(self):
+        """
+        Returns the norm used in the shrinkage method for regularization.
+        """
+
         estimator_penalty_mapping = {
-            'Ridge': 'L2',
             'Lasso': 'L1',
             'LassoLars': 'L1',
             'LassoLarsIC': 'L1',
+            'Ridge': 'L2',
             'ElasticNet': 'L1/L2'
         }
 
