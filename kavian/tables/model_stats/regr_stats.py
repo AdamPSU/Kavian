@@ -182,8 +182,8 @@ class RegressorStatistics:
 
     def durbin_watson(self):
         """
-        Calculate and return the Durbin-Watson statistic for detecting autocorrelation
-        in the residuals of a linear regression model.
+        Calculate and return the Durbin-Watson statistic for detecting
+        autocorrelation in the residuals of a linear regression model.
 
         The Durbin-Watson statistic ranges from 0 to 4, where:
         - A value near 2 indicates no autocorrelation.
@@ -194,7 +194,7 @@ class RegressorStatistics:
         np.float: The Durbin-Watson statistic.
         """
 
-        resid_diff = np.diff(self.resid, 1, 0)
+        resid_diff = np.diff(self.resid, n=1, axis=0)
         durbin_watson = (np.sum(resid_diff**2))/self.rss
 
         return durbin_watson
