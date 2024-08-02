@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from kavian.tables.model_stats import RegressorStatistics
+from kavian.tables.model_stats import RegressorStatistics, BinaryClassifierStatistics
 from kavian.tables.utils import format_stat, format_scientific_notation
 from kavian.tables.config import TABLE_LENGTH, SEPARATOR
 
@@ -82,12 +82,10 @@ class BaseRegressorSummary(ABC):
         skew = format_stat(stats.skew())
         cond_no = format_scientific_notation(stats.cond_no())
         durbin_watson = format_stat(stats.durbin_watson())
+        breusch_pagan_pval = format_stat(stats.breusch_pagan_pvalue())
 
-        # Breusch-Pagan test
-        bp_pval = format_stat(stats.breusch_pagan_pvalue())
-
-        print(f"Skew: {skew} • Breusch-Pagan p-val: {bp_pval} • Durbin-Watson: {durbin_watson}"
-              f" • Cond. No. {cond_no}".center(TABLE_LENGTH))
+        print(f"Skew: {skew} • Breusch-Pagan p-val: {breusch_pagan_pval}"
+              f" • Durbin-Watson: {durbin_watson} • Cond. No. {cond_no}".center(TABLE_LENGTH))
 
 
     def create_table(self, *model_entries):
@@ -143,11 +141,11 @@ class BaseRegressorSummary(ABC):
         (custom_entry_5, custom_value_5) = entries
 
         # Format custom statistics
-        custom_value_1 = format_stat(custom_value_1)
-        custom_value_2 = format_stat(custom_value_2)
-        custom_value_3 = format_stat(custom_value_3)
-        custom_value_4 = format_stat(custom_value_4)
-        custom_value_5 = format_stat(custom_value_5)
+        custom_value_1 = custom_value_1
+        custom_value_2 = custom_value_2
+        custom_value_3 = custom_value_3
+        custom_value_4 = custom_value_4
+        custom_value_5 = custom_value_5
 
         model_table.add_row("No. Features: ", num_features,
                             custom_entry_1, custom_value_1)
@@ -190,13 +188,24 @@ class BaseRegressorSummary(ABC):
         return date
 
 
+def _is_binary_classifier(num_classes):
+    if num_classes == 2:
+        return True
+
+    return False
+
+
 class BaseClassifierSummary(ABC):
     def __init__(self, estimator, X, y):
         self.estimator = estimator
         self.X = X
         self.y = y
 
-        self.stats = RegressorStatistics(self.estimator, self.X, self.y)
+        self.num_classes = self.y.nunique()
+
+        if _is_binary_classifier(self.num_classes):
+            self.stats = BinaryClassifierStatistics(estimator, X, y)
+
         self.console = Console()
 
 
