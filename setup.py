@@ -17,6 +17,6 @@ setup(
     ],
     python_requires='>=3.9',
     install_requires=[
-        'numpy', 'pandas', 'scikit-learn', 'rich', 'pytest', 'statsmodels'
+        'numpy', 'pandas', 'scikit-learn', 'rich', 'pytest', 'statsmodels', 'scipy'
     ],
 )

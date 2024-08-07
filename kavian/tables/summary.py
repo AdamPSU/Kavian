@@ -1,4 +1,4 @@
-from kavian.tables.base import SimpleRegressorSummary
+from kavian.tables.base import SimpleRegressorSummary, SimpleClassifierSummary
 from kavian.tables.linear_model import RegularizedRegressionSummary
 from sklearn.base import ClassifierMixin, RegressorMixin
 
@@ -7,7 +7,8 @@ MODEL_MAPPING = {
     "Ridge": "Regularization",
     "ElasticNet": "Regularization",
     "LassoLars": "Regularization",
-    "LassoLarsIC": "Regularization"
+    "LassoLarsIC": "Regularization",
+    "LogisticRegression": "Classification"
 }
 
 def _get_summary(estimator, X, y):
@@ -18,12 +19,10 @@ def _get_summary(estimator, X, y):
 
     if model_type == 'Regularization':
         return RegularizedRegressionSummary(estimator, X, y)
-    elif isinstance(estimator, ClassifierMixin):
+    elif model_type == 'Classification':
         return SimpleClassifierSummary(estimator, X, y)
-    elif isinstance(estimator, RegressorMixin):
-        return SimpleRegressorSummary(estimator, X, y)
     else:
-        raise ValueError(f"Estimator must be either a classifier or a regressor, got {type(estimator).__name__} instead.")
+        return SimpleRegressorSummary(estimator, X, y)
 
 
 def summary(estimator, X, y):

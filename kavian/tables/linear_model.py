@@ -1,7 +1,7 @@
 import numpy as np
 
 from rich.panel import Panel
-from kavian.tables.base import BaseRegressorSummary
+from kavian.tables.base import BaseRegressorSummary, BaseClassifierSummary
 
 class RegularizedRegressionSummary(BaseRegressorSummary):
     def summary(self):
@@ -33,7 +33,7 @@ class RegularizedRegressionSummary(BaseRegressorSummary):
             'ElasticNet': 'L1/L2'
         }
 
-        estimator_name = self.model_name()
+        estimator_name = self.model_name
 
         return estimator_penalty_mapping.get(estimator_name)
 
@@ -44,3 +44,43 @@ class RegularizedRegressionSummary(BaseRegressorSummary):
 
         return zeros
 
+
+class LogisticRegressionSummary(BaseClassifierSummary):
+    def __init__(self, estimator, X, y):
+        super().__init__(estimator, X, y)
+
+        self.logit_values = self.estimator.predict_proba()
+        self.params = estimator.get_params()
+
+
+    def summary(self):
+        pass
+
+
+    def make_entries(self):
+        matthews_corrcoef = ("MCC: ", self.stats.mcc())
+        penalty = ("Penalty: ", self.norm())
+        sparse_coefs = ("Sparse Features: ", str(self.sparse_coefficients()))
+
+        return [matthews_corrcoef, penalty, sparse_coefs]
+
+
+    def norm(self):
+        """
+        Returns the norm used in the shrinkage method for regularization.
+        """
+
+        penalty = self.params.get('penalty')
+
+        return penalty
+
+
+    def sparse_coefficients(self):
+        coefficients = self.estimator.coef_
+        zeros = np.sum(coefficients == 0)
+
+        return zeros
+
+
+    def pearson_residuals(self):
+        pass

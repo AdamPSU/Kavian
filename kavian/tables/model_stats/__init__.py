@@ -1,5 +1,4 @@
-from kavian.tables.model_stats.regressor_stats import RegressorStatistics
-from kavian.tables.model_stats.classifier_stats import BinaryClassifierStatistics
+from kavian.tables.model_stats.model_results import RegressorStatistics, BinaryClassifierStatistics
 
 __all__ = [
     'RegressorStatistics',

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 from abc import ABC, abstractmethod
 
@@ -12,10 +13,11 @@ from kavian.tables.config import TABLE_LENGTH, SEPARATOR
 
 def _add_empty_columns(table):
     empty_column = ""
-    table.add_column(empty_column)
-    table.add_column(empty_column, justify="right")
-    table.add_column(empty_column)
-    table.add_column(empty_column, justify="right")
+    
+    table.add_column(empty_column, width=25)
+    table.add_column(empty_column, width=23, justify="right")
+    table.add_column(empty_column, width=25)
+    table.add_column(empty_column, width=23, justify="right")
 
 
 def include_new_entries(entries, available_space):
@@ -46,28 +48,39 @@ def include_new_entries(entries, available_space):
     return default
 
 
-class BaseRegressorSummary(ABC):
-    """Base class for regression summaries. All regression summaries inherit this."""
-
+class BaseSummary:
     def __init__(self, estimator, X, y):
         self.estimator = estimator
         self.X = X
         self.y = y
 
-        self.stats = RegressorStatistics(self.estimator, self.X, self.y)
+        self.model_name = type(self.estimator).__name__
+        self.date = pd.Timestamp.now().normalize().strftime('%B %d, %Y')
+
         self.console = Console()
+
+
+    def make_entries(self):
+        """
+        Create new (key, value) entries. This method is designed to be overridden
+        by subclasses to provide specific implementation.
+        """
+
+        return []
+
+
+class BaseRegressorSummary(BaseSummary, ABC):
+    """Base class for regression summaries. All regression summaries inherit this."""
+
+    def __init__(self, estimator, X, y):
+        super().__init__(estimator, X, y)
+
+        self.stats = RegressorStatistics(self.estimator, self.X, self.y)
 
 
     @abstractmethod
     def summary(self):
         """Summarize Model."""
-
-
-    def make_entries(self):
-        """Create new (key, value) entries. This method is designed to be overridden
-        by subclasses to provide specific implementation."""
-
-        return []
 
 
     def print_model_diagnostic(self):
@@ -125,9 +138,9 @@ class BaseRegressorSummary(ABC):
         
         # add_row() accepts 4 renderables, note that the 3rd and 4th
         # are reserved for the second column and are otherwise left empty
-        model_table.add_row("Model: ", self.model_name(),
+        model_table.add_row("Model: ", self.model_name,
                             "Log-Likelihood: ", log_likelihood)
-        model_table.add_row("Date: ", self.current_date(),
+        model_table.add_row("Date: ", self.date,
                             "AIC: ", aic)
         model_table.add_row("Dep. Variable: ", self.y_name(),
                             "BIC: ", bic)
@@ -139,13 +152,6 @@ class BaseRegressorSummary(ABC):
         (custom_entry_1, custom_value_1), (custom_entry_2, custom_value_2), \
         (custom_entry_3, custom_value_3), (custom_entry_4, custom_value_4), \
         (custom_entry_5, custom_value_5) = entries
-
-        # Format custom statistics
-        custom_value_1 = custom_value_1
-        custom_value_2 = custom_value_2
-        custom_value_3 = custom_value_3
-        custom_value_4 = custom_value_4
-        custom_value_5 = custom_value_5
 
         model_table.add_row("No. Features: ", num_features,
                             custom_entry_1, custom_value_1)
@@ -172,22 +178,6 @@ class BaseRegressorSummary(ABC):
         return y_name
 
 
-    def model_name(self):
-        """Returns the model's name."""
-
-        model_name = type(self.estimator).__name__
-
-        return model_name
-
-
-    def current_date(self):
-        """Returns the date."""
-
-        date = pd.Timestamp.now().normalize().strftime('%B %d, %Y')
-
-        return date
-
-
 def _is_binary_classifier(num_classes):
     if num_classes == 2:
         return True
@@ -195,18 +185,85 @@ def _is_binary_classifier(num_classes):
     return False
 
 
-class BaseClassifierSummary(ABC):
+class BaseClassifierSummary(BaseSummary, ABC):
     def __init__(self, estimator, X, y):
-        self.estimator = estimator
-        self.X = X
-        self.y = y
+        super().__init__(estimator, X, y)
 
-        self.num_classes = self.y.nunique()
+        self.num_classes = len(np.unique(self.y))
 
-        if _is_binary_classifier(self.num_classes):
-            self.stats = BinaryClassifierStatistics(estimator, X, y)
+        # if _is_binary_classifier(self.num_classes):
+        self.stats = BinaryClassifierStatistics(estimator, X, y)
 
-        self.console = Console()
+
+    @abstractmethod
+    def summary(self):
+        """Summarize the model."""
+
+
+    def create_table(self, *model_entries):
+        """
+        Generates a basic regression table. This method is designed to be overridden
+        by subclasses to provide specific implementations.
+
+        The regression table includes various statistics and metrics related to the
+        regression analysis. The specific entries and their contents should
+        be detailed in the subclass implementation.
+
+        Parameters:
+        - (Specify any new entries used by the subclass implementation, as long as they don't
+           exceed the available space provided in the table)
+
+        :return: Table
+            A rich Table object containing the regression table with relevant statistics.
+        """
+
+        stats = self.stats
+
+        model_table = Table(show_header=True, box=None, style="bold", expand=True)
+        _add_empty_columns(model_table)
+
+        # Format statistics
+        accuracy = format_stat(stats.accuracy())
+        recall = format_stat(stats.recall)
+        precision = format_stat(stats.precision)
+        f1_score = format_stat(stats.f1_score())
+        roc_auc = format_stat(stats.roc_auc_score())
+
+        # Other
+        num_classes = str(self.num_classes)
+        num_obs = str(self.y.shape[0])
+        num_features = str(self.X.shape[1])
+
+        # add_row() accepts 4 renderables, note that the 3rd and 4th
+        # are reserved for the second column and are otherwise left empty
+        model_table.add_row("Model: ", self.model_name,
+                            "ROC-AUC: ", roc_auc)
+        model_table.add_row("Date: ", self.date,
+                            SEPARATOR)
+        model_table.add_row("No. Labels: ", num_classes)
+        model_table.add_row("No. Obs. ", num_obs)
+
+        entries = include_new_entries(model_entries, available_space=5)
+
+        (custom_entry_1, custom_value_1), (custom_entry_2, custom_value_2), \
+        (custom_entry_3, custom_value_3), (custom_entry_4, custom_value_4), \
+        (custom_entry_5, custom_value_5) = entries
+
+        model_table.add_row("No. Features: ", num_features,
+                            custom_entry_1, custom_value_1)
+        model_table.add_row("Accuracy: ", accuracy,
+                            custom_entry_2, custom_value_2)
+        model_table.add_row("Recall: ", recall,
+                            custom_entry_3, custom_value_3)
+        model_table.add_row("Precision: ", precision,
+                            custom_entry_4, custom_value_4)
+        model_table.add_row("F1: ", f1_score,
+                            custom_entry_5, custom_value_5)
+
+        # Add an empty row
+        model_table.add_row()
+
+        return model_table
 
 
 class SimpleRegressorSummary(BaseRegressorSummary):
@@ -216,12 +273,20 @@ class SimpleRegressorSummary(BaseRegressorSummary):
     """
 
     def summary(self):
-        model_entries = self.make_entries()
-        model_table = self.create_table(*model_entries)
+        model_table = self.create_table()
 
         self.console.print(Panel(model_table, title="Regression Results",
                                  subtitle="Test Diagnostics"))
         self.print_model_diagnostic()
+
+
+class SimpleClassifierSummary(BaseClassifierSummary):
+    def summary(self):
+        model_table = self.create_table()
+
+        self.console.print(Panel(model_table, title="Classification Results",
+                                 subtitle="Test Diagnostics"))
+
 
 
 
