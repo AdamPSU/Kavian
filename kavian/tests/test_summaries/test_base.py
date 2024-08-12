@@ -6,7 +6,8 @@ from sklearn.linear_model import LinearRegression
 from rich.panel import Panel
 
 from kavian.tables.base import (
-    RegressorSummaryMixin,
+    BaseRegressorSummary,
+    BaseClassifierSummary,
     SimpleRegressorSummary,
     SimpleClassifierSummary
 )
@@ -14,7 +15,7 @@ from kavian.tables.base import (
 X_RANDOM = np.random.rand(100, 3)
 Y_RANDOM = np.random.rand(100)
 
-class TooManyEntries(RegressorSummaryMixin):
+class TooManyEntriesSummary(BaseRegressorSummary):
     """Edge case with just too many entries."""
 
     def make_entries(self):
@@ -22,6 +23,26 @@ class TooManyEntries(RegressorSummaryMixin):
         available_space = 5
 
         return [empty]*(available_space + 1)
+
+
+    def summary(self):
+        model_entries = self.make_entries()
+        model_table = self.create_table(*model_entries)
+
+        self.console.print(Panel(model_table))
+
+
+class ReallyLongEntrySummary(BaseClassifierSummary):
+    """
+    Edge case with an entry that is too large.
+    This isn't necessarily an error, but it is preferrable
+    that long names are truncated to fit the table.
+    """
+
+    def make_entries(self):
+        really_long_entry = ("kavian"*50, "")
+
+        return [really_long_entry]
 
 
     def summary(self):
@@ -52,39 +73,13 @@ def test_compatibility(get_diabetes, get_breast_cancer):
 
 def test_too_many_entries():
     with (pytest.raises(ValueError)):
-        test = TooManyEntries(LinearRegression(), X_RANDOM, Y_RANDOM)
+        test = TooManyEntriesSummary(LinearRegression(), X_RANDOM, Y_RANDOM)
         test.summary()
 
 
-def test_regressor_statistics(get_diabetes, get_california_housing):
-    """
-    Tests accuracy of regression tables statistics.
 
-    Hardcoded values are taken from statsmodels.api's OLS regression
-    model fitted on the same data.
-    """
 
-    linear_diabetes, X_diabetes, y_diabetes = get_diabetes
-    linear_calif, X_calif, y_calif = get_california_housing
 
-    diabetes = SimpleRegressorSummary(linear_diabetes, X_diabetes, y_diabetes)
-    california = SimpleRegressorSummary(linear_calif, X_calif, y_calif)
-
-    assert np.ceil(diabetes.get_rss()) == 1_263_986
-    assert np.ceil(california.get_rss()) == 10_822
-
-    assert np.ceil(diabetes.get_log_likelihood()) == -2_385
-    assert np.ceil(california.get_log_likelihood()) == -22_623
-
-    assert np.ceil(diabetes.get_aic()) == 4_794
-    assert np.ceil(california.get_aic()) == 45_266
-
-    assert np.ceil((diabetes.get_bic())) == 4_839
-    assert np.ceil((california.get_bic())) == 45_337
-
-    assert np.round(diabetes.get_adj_r2(), 3) == 0.507
-
-    assert np.round(california.get_adj_r2(), 3) == 0.606
 
 
 

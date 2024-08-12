@@ -1,15 +1,15 @@
-import pandas as pd
 import numpy as np
-
+import pandas as pd
 from abc import ABC, abstractmethod
 
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from kavian.tables.model_stats import RegressorStatistics, BinaryClassifierStatistics
-from kavian.tables.utils import format_stat, format_scientific_notation
-from kavian.tables.config import TABLE_LENGTH, SEPARATOR
+from kavian.tables.config import SEPARATOR, TABLE_LENGTH
+from kavian.tables.model_stats import BinaryClassifierStatistics, RegressorStatistics
+from kavian.tables.utils import format_scientific_notation, format_stat
+
 
 def _add_empty_columns(table):
     empty_column = ""
@@ -42,6 +42,9 @@ def include_new_entries(entries, available_space):
             f"but got {len(entries)} instead."
         )
 
+    for key, _ in entries:
+        pass
+
     for idx in range(len(entries)):
         default[idx] = entries[idx]
 
@@ -49,6 +52,7 @@ def include_new_entries(entries, available_space):
 
 
 class BaseSummary:
+    """Base class for all Kavian summarizers."""
     def __init__(self, estimator, X, y):
         self.estimator = estimator
         self.X = X
