@@ -218,7 +218,7 @@ def _divide(numerator, denominator):
     return division
 
 
-class ClassifierStatsBase(ABC):
+class BaseClassifierStats(ABC):
     def __init__(self, estimator, X, y):
         self.X, self.y = np.array(X), np.array(y)
         self.intercept = estimator.intercept_
@@ -257,7 +257,7 @@ class ClassifierStatsBase(ABC):
         return roc_auc
 
 
-class BinaryClassifierStatistics(ClassifierStatsBase):
+class BinaryClassifierStatistics(BaseClassifierStats):
     def __init__(self, estimator, X, y):
         super().__init__(estimator, X, y)
 

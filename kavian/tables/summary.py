@@ -1,6 +1,5 @@
 from kavian.tables.base import SimpleRegressorSummary, SimpleClassifierSummary
-from kavian.tables.linear_model import RegularizedRegressionSummary
-from sklearn.base import ClassifierMixin, RegressorMixin
+from kavian.tables.linear_model import RegularizedRegressorSummary, BinaryClassifierSummary
 
 MODEL_MAPPING = {
     "Lasso": "Regularization",
@@ -8,7 +7,7 @@ MODEL_MAPPING = {
     "ElasticNet": "Regularization",
     "LassoLars": "Regularization",
     "LassoLarsIC": "Regularization",
-    "LogisticRegression": "Classification"
+    "LogisticRegression": "Binary"
 }
 
 def _get_summary(estimator, X, y):
@@ -18,9 +17,9 @@ def _get_summary(estimator, X, y):
     model_type = MODEL_MAPPING.get(estimator_name)
 
     if model_type == 'Regularization':
-        return RegularizedRegressionSummary(estimator, X, y)
-    elif model_type == 'Classification':
-        return SimpleClassifierSummary(estimator, X, y)
+        return RegularizedRegressorSummary(estimator, X, y)
+    elif model_type == 'Binary':
+        return BinaryClassifierSummary(estimator, X, y)
     else:
         return SimpleRegressorSummary(estimator, X, y)
 

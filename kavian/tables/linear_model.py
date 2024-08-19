@@ -2,8 +2,9 @@ import numpy as np
 
 from rich.panel import Panel
 from kavian.tables.base import BaseRegressorSummary, BaseClassifierSummary
+from kavian.tables.utils import format_stat
 
-class RegularizedRegressionSummary(BaseRegressorSummary):
+class RegularizedRegressorSummary(BaseRegressorSummary):
     def summary(self):
         model_entries = self.make_entries()
         model_table = self.create_table(*model_entries)
@@ -45,20 +46,23 @@ class RegularizedRegressionSummary(BaseRegressorSummary):
         return zeros
 
 
-class LogisticRegressionSummary(BaseClassifierSummary):
+class BinaryClassifierSummary(BaseClassifierSummary):
     def __init__(self, estimator, X, y):
         super().__init__(estimator, X, y)
 
-        self.logit_values = self.estimator.predict_proba()
         self.params = estimator.get_params()
 
 
     def summary(self):
-        pass
+        model_entries = self.make_entries()
+        model_table = self.create_table(*model_entries)
+
+        self.console.print(Panel(model_table, title="Binary Classification Results",
+                                 subtitle="Test Diagnostics"))
 
 
     def make_entries(self):
-        matthews_corrcoef = ("MCC: ", self.stats.mcc())
+        matthews_corrcoef = ("MCC: ", format_stat(self.stats.mcc()))
         penalty = ("Penalty: ", self.norm())
         sparse_coefs = ("Sparse Features: ", str(self.sparse_coefficients()))
 
@@ -82,5 +86,5 @@ class LogisticRegressionSummary(BaseClassifierSummary):
         return zeros
 
 
-    def pearson_residuals(self):
-        pass
+
+

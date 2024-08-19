@@ -189,13 +189,11 @@ def _is_binary_classifier(num_classes):
     return False
 
 
-class BaseClassifierSummary(BaseSummary, ABC):
+class BaseBinaryClassifierSummary(BaseSummary, ABC):
     def __init__(self, estimator, X, y):
         super().__init__(estimator, X, y)
 
         self.num_classes = len(np.unique(self.y))
-
-        # if _is_binary_classifier(self.num_classes):
         self.stats = BinaryClassifierStatistics(estimator, X, y)
 
 
@@ -244,25 +242,28 @@ class BaseClassifierSummary(BaseSummary, ABC):
                             "ROC-AUC: ", roc_auc)
         model_table.add_row("Date: ", self.date,
                             SEPARATOR)
-        model_table.add_row("No. Labels: ", num_classes)
-        model_table.add_row("No. Obs. ", num_obs)
 
-        entries = include_new_entries(model_entries, available_space=5)
+        entries = include_new_entries(model_entries, available_space=7)
 
         (custom_entry_1, custom_value_1), (custom_entry_2, custom_value_2), \
         (custom_entry_3, custom_value_3), (custom_entry_4, custom_value_4), \
-        (custom_entry_5, custom_value_5) = entries
+        (custom_entry_5, custom_value_5), (custom_entry_6, custom_value_6), \
+        (custom_entry_7, custom_value_7) = entries
 
-        model_table.add_row("No. Features: ", num_features,
+        model_table.add_row("No. Labels: ", num_classes,
                             custom_entry_1, custom_value_1)
-        model_table.add_row("Accuracy: ", accuracy,
+        model_table.add_row("No. Obs. ", num_obs,
                             custom_entry_2, custom_value_2)
-        model_table.add_row("Recall: ", recall,
+        model_table.add_row("No. Features: ", num_features,
                             custom_entry_3, custom_value_3)
-        model_table.add_row("Precision: ", precision,
+        model_table.add_row("Accuracy: ", accuracy,
                             custom_entry_4, custom_value_4)
-        model_table.add_row("F1: ", f1_score,
+        model_table.add_row("Recall: ", recall,
                             custom_entry_5, custom_value_5)
+        model_table.add_row("Precision: ", precision,
+                            custom_entry_6, custom_value_6)
+        model_table.add_row("F1: ", f1_score,
+                            custom_entry_7, custom_value_7)
 
         # Add an empty row
         model_table.add_row()
@@ -284,7 +285,7 @@ class SimpleRegressorSummary(BaseRegressorSummary):
         self.print_model_diagnostic()
 
 
-class SimpleClassifierSummary(BaseClassifierSummary):
+class SimpleClassifierSummary(BaseBinaryClassifierSummary):
     def summary(self):
         model_table = self.create_table()
 
