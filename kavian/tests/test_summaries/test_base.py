@@ -32,26 +32,6 @@ class TooManyEntriesSummary(BaseRegressorSummary):
         self.console.print(Panel(model_table))
 
 
-class ReallyLongEntrySummary(BaseClassifierSummary):
-    """
-    Edge case with an entry that is too large.
-    This isn't necessarily an error, but it is preferrable
-    that long names are truncated to fit the table.
-    """
-
-    def make_entries(self):
-        really_long_entry = ("kavian"*50, "")
-
-        return [really_long_entry]
-
-
-    def summary(self):
-        model_entries = self.make_entries()
-        model_table = self.create_table(*model_entries)
-
-        self.console.print(Panel(model_table))
-
-
 def test_compatibility(get_diabetes, get_breast_cancer):
     # Both Numpy arrays and Pandas Dataframes should be compatible
 
