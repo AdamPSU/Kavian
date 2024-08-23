@@ -34,7 +34,8 @@ INT = {
 CAT = {
     'object',
     'category',
-    'string'
+    'string',
+    'bool'
 }
 
 BOOL = {

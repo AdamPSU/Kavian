@@ -1,7 +1,8 @@
 import pandas as pd
 import numpy as np
 
-from kavian.eda.config import FLOAT, NUM, DTYPE_PRIORITY
+from kavian.eda.config import FLOAT, NUM, CAT, DTYPE_PRIORITY
+from kavian import KavianError
 
 def _process_mode(dataframe: pd.DataFrame):
     """
@@ -12,11 +13,11 @@ def _process_mode(dataframe: pd.DataFrame):
     size = dataframe.value_counts().sum()
 
     for col in dataframe:
-        mode = col.mode()
-        mode_size = col.value_counts()[0]
+        mode = dataframe[col].mode().iloc[0]
+        mode_size = dataframe[col].value_counts().iloc[0]
 
-        if mode in FLOAT:
-            mode = np.round(mode, 5)
+        if dataframe[col].dtype.name in FLOAT:
+            mode = f'{mode:.3f}'
 
         percent = f'{mode_size / size * 100:.2f}%'
 
@@ -55,30 +56,48 @@ def _process_memory(dataframe: pd.DataFrame):
         return f'{memory / kb ** 3:.2f} GB'
 
 
-def info(dataframe: pd.DataFrame, categorical='auto'):
-    features = sorted(dataframe.columns, key=lambda col: DTYPE_PRIORITY[dataframe[col].dtype.name], )
+def info(dataframe: pd.DataFrame, include_cat=True, include_num=True):
+    if not include_cat and not include_num:
+        raise KavianError(
+            "Neither categorical nor numerical features were supplied. Please include at least "
+            "one parameter for exploratory analysis."
+        )
+
+    if not include_cat:
+        numerical = dataframe.select_dtypes(include=NUM)
+        dataframe = numerical
+
+    if not include_num:
+        categorical = dataframe.select_dtypes(include=CAT)
+        dataframe = categorical
+
+    # Sort features
+    features = sorted(dataframe.columns, key=lambda col: DTYPE_PRIORITY[dataframe[col].dtype.name])
     dataframe = dataframe[features]
 
     null = dataframe.isna().sum()
     null_percents = null / len(dataframe) * 100
-    null_percents = null_percents.apply(lambda x: f'{x:.2f}')
+    null_percents = null_percents.apply(lambda x: f'{x:.2f}%')
 
     most_common, most_common_percents = _process_mode(dataframe)
-    min_values, max_values = _process_num(dataframe)
 
     unique = dataframe.nunique()
     dtypes = dataframe.dtypes
 
-    analysis = pd.DataFrame({'Dtype': dtypes,
-                                  'Unique': unique,
-                                  'Null': null,
-                                  'Null %': null_percents,
-                                  'Most Common': most_common,
-                                  'Most Common %': most_common_percents,
-                                  'Min': min_values,
-                                  'Max': max_values},
-                            index=features)
+    data = {'Dtype': dtypes,
+            'Unique': unique,
+            'Null': null,
+            'Null %': null_percents,
+            'Most Common': most_common,
+            'Most Common %': most_common_percents}
 
+    if include_num:
+        min_values, max_values = _process_num(dataframe)
+
+        data['Min'] = min_values
+        data['Max'] = max_values
+
+    analysis = pd.DataFrame(data, index=features)
     analysis = analysis.style.set_table_styles([
         {'selector': 'td, th', 'props': [('border', '0.2px solid white')]},
     ])
@@ -90,6 +109,8 @@ def info(dataframe: pd.DataFrame, categorical='auto'):
           f'memory usage: {memory}')
 
     return analysis
+
+
 
 
 
