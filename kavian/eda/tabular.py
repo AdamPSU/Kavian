@@ -4,13 +4,14 @@ import numpy as np
 from kavian.eda.config import FLOAT, NUM, CAT, DTYPE_PRIORITY
 from kavian import KavianError
 
+
 def _process_mode(dataframe: pd.DataFrame):
     """
     Should test this function
     """
 
     modes, percents = [], []
-    size = dataframe.value_counts().sum()
+    size = len(dataframe)
 
     for col in dataframe:
         mode = dataframe[col].mode().iloc[0]
@@ -21,25 +22,10 @@ def _process_mode(dataframe: pd.DataFrame):
 
         percent = f'{mode_size / size * 100:.2f}%'
 
-        modes.append(mode); percents.append(percent)
+        modes.append(mode);
+        percents.append(percent)
 
     return modes, percents
-
-
-def _process_num(dataframe: pd.DataFrame):
-    min_values, max_values = [], []
-
-    for col in dataframe:
-        if dataframe[col].dtype.name not in NUM:
-            min_values.append(' '); max_values.append(' ')
-            continue
-
-        min_value = f'{dataframe[col].min():.3f}'
-        max_value = f'{dataframe[col].max():.3f}'
-
-        min_values.append(min_value); max_values.append(max_value)
-
-    return min_values, max_values
 
 
 def _process_memory(dataframe: pd.DataFrame):
@@ -56,24 +42,23 @@ def _process_memory(dataframe: pd.DataFrame):
         return f'{memory / kb ** 3:.2f} GB'
 
 
-def info(dataframe: pd.DataFrame, include_cat=True, include_num=True):
-    if not include_cat and not include_num:
+def info(dataframe: pd.DataFrame, numerical=True, categorical=True):
+    if not categorical and not numerical:
         raise KavianError(
             "Neither categorical nor numerical features were supplied. Please include at least "
             "one parameter for exploratory analysis."
         )
 
-    if not include_cat:
-        numerical = dataframe.select_dtypes(include=NUM)
-        dataframe = numerical
+    if numerical:
+        num = dataframe.select_dtypes(include=NUM)
+        dataframe = num
 
-    if not include_num:
-        categorical = dataframe.select_dtypes(include=CAT)
-        dataframe = categorical
+    if categorical:
+        cat = dataframe.select_dtypes(include=CAT)
+        dataframe = cat
 
-    # Sort features
-    features = sorted(dataframe.columns, key=lambda col: DTYPE_PRIORITY[dataframe[col].dtype.name])
-    dataframe = dataframe[features]
+    sorted_features = sorted(dataframe.columns, key=lambda col: DTYPE_PRIORITY[dataframe[col].dtype.name])
+    dataframe = dataframe[sorted_features]
 
     null = dataframe.isna().sum()
     null_percents = null / len(dataframe) * 100
@@ -91,13 +76,8 @@ def info(dataframe: pd.DataFrame, include_cat=True, include_num=True):
             'Most Common': most_common,
             'Most Common %': most_common_percents}
 
-    if include_num:
-        min_values, max_values = _process_num(dataframe)
-
-        data['Min'] = min_values
-        data['Max'] = max_values
-
-    analysis = pd.DataFrame(data, index=features)
+    analysis = pd.DataFrame(data, index=sorted_features)
+    # Color white
     analysis = analysis.style.set_table_styles([
         {'selector': 'td, th', 'props': [('border', '0.2px solid white')]},
     ])
@@ -105,26 +85,45 @@ def info(dataframe: pd.DataFrame, include_cat=True, include_num=True):
     memory = _process_memory(dataframe)
     num_cols = len(dataframe.columns)
 
-    print(f'no. columns: {num_cols} • table size: {len(dataframe)} • ' +
-          f'memory usage: {memory}')
+    print(f'table size: {len(dataframe)} • no. columns: {num_cols} • memory usage: {memory}')
 
     return analysis
 
 
+def describe(dataframe: pd.DataFrame, numerical=True):
+    categorical = None
 
+    if not categorical and not numerical:
+        raise KavianError(
+            "Neither categorical nor numerical features were supplied. Please include "
+            "one parameter for exploratory analysis."
+        )
 
+    if numerical:
+        dataframe = dataframe.select_dtypes(include=NUM)
+        sorted_features = sorted(dataframe.columns, key=lambda col: DTYPE_PRIORITY[dataframe[col].dtype.name])
 
+        dataframe = dataframe[sorted_features]
 
+        analysis = pd.DataFrame({
+            'Count': dataframe.count(),
+            'Mean': dataframe.mean(),
+            'Stdev': dataframe.std(),
+            'Min': dataframe.min(),
+            '25%': dataframe.quantile(0.25),
+            '50%': dataframe.median(),
+            '75%': dataframe.quantile(0.75),
+            'Max': dataframe.max(),
+            'Skewness': dataframe.skew()
+        }, index=sorted_features)
 
+        analysis = analysis.applymap(lambda x: f'{x:.3f}' if isinstance(x, float) else str(x))
 
+    analysis = analysis.style.set_table_styles([
+        {'selector': 'td, th', 'props': [('border', '0.2px solid white')]},
+    ])
 
-
-
-
-
-
-
-
+    return analysis
 
 
 
