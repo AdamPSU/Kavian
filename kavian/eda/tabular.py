@@ -9,7 +9,8 @@ from _colors import color_thresholded_column, color_adversarial_column
 
 def _process_mode(dataframe: pd.DataFrame):
     """
-    Should test this function
+    Returns the mode and mode percentage of all
+    specified dataframe columns.
     """
 
     modes, percents = [], []
@@ -31,6 +32,10 @@ def _process_mode(dataframe: pd.DataFrame):
 
 
 def _process_memory(dataframe: pd.DataFrame):
+    """
+    Provides memory usage information for a given dataframe.
+    """
+
     memory = dataframe.memory_usage(deep=True).sum()
     kb = 1024
 

@@ -40,6 +40,3 @@ def color_adversarial_column(val, threshold):
     color = mcolors.to_hex([1 - intensity * (1 - r) for r in rgb])
 
     return f'color: {color}'
-
-
-
