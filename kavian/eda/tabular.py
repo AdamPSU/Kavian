@@ -4,6 +4,8 @@ import numpy as np
 from kavian.eda.config import FLOAT, NUM, CAT, DTYPE_PRIORITY
 from kavian import KavianError
 
+from _colors import color_thresholded_column, color_adversarial_column
+
 
 def _process_mode(dataframe: pd.DataFrame):
     """
@@ -20,7 +22,7 @@ def _process_mode(dataframe: pd.DataFrame):
         if dataframe[col].dtype.name in FLOAT:
             mode = f'{mode:.3f}'
 
-        percent = f'{mode_size / size * 100:.2f}%'
+        percent = mode_size / size * 100
 
         modes.append(mode);
         percents.append(percent)
@@ -49,20 +51,20 @@ def info(dataframe: pd.DataFrame, numerical=True, categorical=True):
             "one parameter for exploratory analysis."
         )
 
-    if numerical:
-        num = dataframe.select_dtypes(include=NUM)
-        dataframe = num
+    if not categorical:
+        numerical = dataframe.select_dtypes(include=NUM)
+        dataframe = numerical
 
-    if categorical:
-        cat = dataframe.select_dtypes(include=CAT)
-        dataframe = cat
+    if not numerical:
+        categorical = dataframe.select_dtypes(include=CAT)
+        dataframe = categorical
 
-    sorted_features = sorted(dataframe.columns, key=lambda col: DTYPE_PRIORITY[dataframe[col].dtype.name])
-    dataframe = dataframe[sorted_features]
+    # Sort features
+    features = sorted(dataframe.columns, key=lambda col: DTYPE_PRIORITY[dataframe[col].dtype.name])
+    dataframe = dataframe[features]
 
     null = dataframe.isna().sum()
     null_percents = null / len(dataframe) * 100
-    null_percents = null_percents.apply(lambda x: f'{x:.2f}%')
 
     most_common, most_common_percents = _process_mode(dataframe)
 
@@ -76,16 +78,22 @@ def info(dataframe: pd.DataFrame, numerical=True, categorical=True):
             'Most Common': most_common,
             'Most Common %': most_common_percents}
 
-    analysis = pd.DataFrame(data, index=sorted_features)
-    # Color white
-    analysis = analysis.style.set_table_styles([
+    analysis = pd.DataFrame(data, index=features).style
+    analysis = analysis.applymap(lambda x: color_thresholded_column(x, low_threshold=3, high_threshold=15),
+                                 subset=['Null %'])
+    analysis = analysis.applymap(lambda x: color_thresholded_column(x, low_threshold=20, high_threshold=40),
+                                 subset=['Most Common %'])
+
+    analysis = analysis.format({'Null %': '{:.2f}%', 'Most Common %': '{:.2f}%'})
+    analysis = analysis.set_table_styles([
         {'selector': 'td, th', 'props': [('border', '0.2px solid white')]},
     ])
 
     memory = _process_memory(dataframe)
     num_cols = len(dataframe.columns)
+    num_obs = len(dataframe)
 
-    print(f'table size: {len(dataframe)} • no. columns: {num_cols} • memory usage: {memory}')
+    print(f'table size: {num_obs} • no. columns: {num_cols} • memory usage: {memory}')
 
     return analysis
 
@@ -117,13 +125,15 @@ def describe(dataframe: pd.DataFrame, numerical=True):
             'Skewness': dataframe.skew()
         }, index=sorted_features)
 
-        analysis = analysis.applymap(lambda x: f'{x:.3f}' if isinstance(x, float) else str(x))
+        styled_analysis = analysis.style.format('{:.3f}', subset=analysis.columns.drop('Count'))
+        styled_analysis = styled_analysis.applymap(lambda x: color_adversarial_column(x, threshold=0),
+                                                   subset=['Skewness'])
 
-    analysis = analysis.style.set_table_styles([
+    styled_analysis = styled_analysis.set_table_styles([
         {'selector': 'td, th', 'props': [('border', '0.2px solid white')]},
     ])
 
-    return analysis
+    return styled_analysis
 
 
 
