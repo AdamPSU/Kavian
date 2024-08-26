@@ -4,7 +4,7 @@ import numpy as np
 from kavian.eda.config import FLOAT, NUM, CAT, DTYPE_PRIORITY
 from kavian import KavianError
 
-from _colors import color_thresholded_column, color_adversarial_column
+from kavian.eda._colors import color_thresholded_column, color_adversarial_column, color_outliers
 
 
 def _process_mode(dataframe: pd.DataFrame):
@@ -25,8 +25,7 @@ def _process_mode(dataframe: pd.DataFrame):
 
         percent = mode_size / size * 100
 
-        modes.append(mode);
-        percents.append(percent)
+        modes.append(mode); percents.append(percent)
 
     return modes, percents
 
@@ -49,7 +48,7 @@ def _process_memory(dataframe: pd.DataFrame):
         return f'{memory / kb ** 3:.2f} GB'
 
 
-def info(dataframe: pd.DataFrame, numerical=True, categorical=True):
+def info(dataframe: pd.DataFrame, numerical=True, categorical=True, colored_output=True):
     if not categorical and not numerical:
         raise KavianError(
             "Neither categorical nor numerical features were supplied. Please include at least "
@@ -80,16 +79,18 @@ def info(dataframe: pd.DataFrame, numerical=True, categorical=True):
             'Unique': unique,
             'Null': null,
             'Null %': null_percents,
-            'Most Common': most_common,
-            'Most Common %': most_common_percents}
+            'Top': most_common,
+            'Top %': most_common_percents}
 
     analysis = pd.DataFrame(data, index=features).style
-    analysis = analysis.applymap(lambda x: color_thresholded_column(x, low_threshold=3, high_threshold=15),
-                                 subset=['Null %'])
-    analysis = analysis.applymap(lambda x: color_thresholded_column(x, low_threshold=20, high_threshold=40),
-                                 subset=['Most Common %'])
+    analysis = analysis.format({'Null %': '{:.2f}%', 'Top %': '{:.2f}%'})
 
-    analysis = analysis.format({'Null %': '{:.2f}%', 'Most Common %': '{:.2f}%'})
+    if colored_output:
+        analysis = analysis.map(lambda x: color_thresholded_column(x, low_threshold=3, high_threshold=15),
+                                subset=['Null %'])
+        analysis = analysis.map(lambda x: color_thresholded_column(x, low_threshold=20, high_threshold=40),
+                                subset=['Top %'])
+
     analysis = analysis.set_table_styles([
         {'selector': 'td, th', 'props': [('border', '0.2px solid white')]},
     ])
@@ -103,16 +104,8 @@ def info(dataframe: pd.DataFrame, numerical=True, categorical=True):
     return analysis
 
 
-def describe(dataframe: pd.DataFrame, numerical=True):
-    categorical = None
-
-    if not categorical and not numerical:
-        raise KavianError(
-            "Neither categorical nor numerical features were supplied. Please include "
-            "one parameter for exploratory analysis."
-        )
-
-    if numerical:
+def describe(dataframe: pd.DataFrame, categorical=False, colored_output=True):
+    if not categorical:
         dataframe = dataframe.select_dtypes(include=NUM)
         sorted_features = sorted(dataframe.columns, key=lambda col: DTYPE_PRIORITY[dataframe[col].dtype.name])
 
@@ -130,18 +123,40 @@ def describe(dataframe: pd.DataFrame, numerical=True):
             'Skewness': dataframe.skew()
         }, index=sorted_features)
 
-        styled_analysis = analysis.style.format('{:.3f}', subset=analysis.columns.drop('Count'))
-        styled_analysis = styled_analysis.applymap(lambda x: color_adversarial_column(x, threshold=0),
-                                                   subset=['Skewness'])
+        if colored_output:
+            analysis = color_outliers(analysis, cols=['Min', 'Max'])
+            analysis = analysis.map(lambda x: color_adversarial_column(x, threshold=0),
+                                         subset=['Skewness'])
 
-    styled_analysis = styled_analysis.set_table_styles([
+        if hasattr(analysis, 'style'):
+            analysis = analysis.style
+
+        analysis = analysis.format('{:.3f}')
+    else:
+        dataframe = dataframe.select_dtypes(include=CAT)
+        sorted_features = sorted(dataframe.columns, key=lambda col: DTYPE_PRIORITY[dataframe[col].dtype.name])
+
+        top, top_percent = _process_mode(dataframe)
+
+        analysis = pd.DataFrame({
+            'Count': dataframe.count(),
+            'Unique': dataframe.nunique(),
+            'Top': top,
+            'Top %': top_percent
+
+        }, index=sorted_features)
+
+        analysis = analysis.style
+
+        if colored_output:
+            analysis = analysis.map(
+                lambda x: color_thresholded_column(x, low_threshold=20, high_threshold=40),
+                subset=['Top %'])
+
+        analysis = analysis.format({'Top %': '{:.2f}%'})
+
+    analysis.set_table_styles([
         {'selector': 'td, th', 'props': [('border', '0.2px solid white')]},
     ])
 
-    return styled_analysis
-
-
-
-
-
-
+    return analysis
