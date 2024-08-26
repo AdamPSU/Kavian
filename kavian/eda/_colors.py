@@ -1,11 +1,12 @@
 import matplotlib.colors as mcolors
+import pandas as pd
 
 # https://claude.ai/chat/8446fe9a-55b1-4823-86e8-190769337e51
 
 def color_thresholded_column(val, low_threshold, high_threshold):
-    white_color = '#fff'  # White
-    yellow_color = '#FBEC5D'  # Yellow
-    red_color = '#e85440'  # Red
+    white_color = '#fff'
+    yellow_color = '#FBEC5D'
+    red_color = '#e85440'
 
     if val < low_threshold:
         # White to Yellow range
@@ -40,3 +41,23 @@ def color_adversarial_column(val, threshold):
     color = mcolors.to_hex([1 - intensity * (1 - r) for r in rgb])
 
     return f'color: {color}'
+
+
+def color_outliers(dataframe, cols):
+    threshold = 3
+
+    def highlight_outliers(val, z_score):
+        if abs(z_score) > threshold:
+            return 'color: #e85440'
+        return ''
+
+    z_scores = pd.DataFrame()
+    for col in cols:
+        z_scores[col] = (dataframe[col] - dataframe['Mean']) / dataframe['Stdev']
+
+    def apply_styling(row):
+        return [highlight_outliers(row[col], z_scores.at[row.name, col]) for col in cols]
+
+    styler = dataframe.style.apply(apply_styling, axis=1, subset=cols)
+
+    return styler
