@@ -48,12 +48,15 @@ def _process_memory(dataframe: pd.DataFrame):
         return f'{memory / kb ** 3:.2f} GB'
 
 
-def info(dataframe: pd.DataFrame, numerical=True, categorical=True, colored_output=True):
+def info(dataframe: pd.DataFrame, numerical=True, categorical=True, colored_output=True, subset=None):
     if not categorical and not numerical:
         raise KavianError(
             "Neither categorical nor numerical features were supplied. Please include at least "
             "one parameter for exploratory analysis."
         )
+
+    if subset:
+        dataframe[subset]
 
     if not categorical:
         numerical = dataframe.select_dtypes(include=NUM)
@@ -86,7 +89,7 @@ def info(dataframe: pd.DataFrame, numerical=True, categorical=True, colored_outp
     analysis = analysis.format({'Null %': '{:.2f}%', 'Top %': '{:.2f}%'})
 
     if colored_output:
-        analysis = analysis.map(lambda x: color_thresholded_column(x, low_threshold=3, high_threshold=15),
+        analysis = analysis.map(lambda x: color_thresholded_column(x, low_threshold=3, high_threshold=10),
                                 subset=['Null %'])
         analysis = analysis.map(lambda x: color_thresholded_column(x, low_threshold=20, high_threshold=40),
                                 subset=['Top %'])
@@ -104,7 +107,10 @@ def info(dataframe: pd.DataFrame, numerical=True, categorical=True, colored_outp
     return analysis
 
 
-def describe(dataframe: pd.DataFrame, categorical=False, colored_output=True):
+def describe(dataframe: pd.DataFrame, categorical=False, colored_output=True, subset=None):
+    if subset:
+        dataframe = dataframe[subset]
+
     if not categorical:
         dataframe = dataframe.select_dtypes(include=NUM)
         sorted_features = sorted(dataframe.columns, key=lambda col: DTYPE_PRIORITY[dataframe[col].dtype.name])
@@ -126,7 +132,7 @@ def describe(dataframe: pd.DataFrame, categorical=False, colored_output=True):
         if colored_output:
             analysis = color_outliers(analysis, cols=['Min', 'Max'])
             analysis = analysis.map(lambda x: color_adversarial_column(x, threshold=0),
-                                         subset=['Skewness'])
+                                    subset=['Skewness'])
 
         if hasattr(analysis, 'style'):
             analysis = analysis.style
