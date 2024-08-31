@@ -26,7 +26,6 @@ def _barplot_framework(ax, title):
     ax.set_yticklabels(ax.get_yticklabels(), fontweight='bold', fontstyle='italic')
     ax.set_xlabel('')
     ax.set_ylabel('')
-
     ax.set_title(f'{title} Barchart', fontdict={'fontsize': 24, 'fontfamily': 'serif'})
 
     for bar in ax.patches:
@@ -214,6 +213,34 @@ def eda_barplot(dataframe, palette='kavian', subset=None):
                          color='black', fontweight='bold', fontstyle='italic')
             ax.bar_label(container, labels=large_percents, padding=-50,
                          color='white', fontweight='bold', fontstyle='italic')
+
+    plt.tight_layout()
+    plt.show()
+
+
+def heatmap(dataframe, palette='kavian', subset=None):
+    if subset:
+        dataframe = dataframe[subset]
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+
+    numerical = dataframe.select_dtypes(NUM)
+    corr = numerical.corr()
+    font_size = 18 - len(numerical.columns)
+
+    annot_kws = {'size': font_size, 'fontweight': 'bold', 'fontstyle': 'italic'}
+    cbar_kws = {'pad': 0.01}
+
+    if palette == 'kavian':
+        palette = sns.diverging_palette(18, 240, s=80, l=50, n=19, center="dark")
+
+    sns.heatmap(corr, ax=ax, cmap=palette, annot=True, annot_kws=annot_kws,
+                cbar_kws=cbar_kws, fmt='.2f', linecolor='black', linewidth=0.5, square=True)
+
+    ax.tick_params(rotation=20)
+    ax.set_xticklabels(ax.get_xticklabels(), fontweight='bold', fontstyle='italic')
+    ax.set_yticklabels(ax.get_yticklabels(), fontweight='bold', fontstyle='italic')
+    ax.set_title(f'EDA Heatmap', fontdict={'fontsize': 24, 'fontfamily': 'serif'})
 
     plt.tight_layout()
     plt.show()
