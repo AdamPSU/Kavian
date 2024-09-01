@@ -1,11 +1,8 @@
 import pandas as pd
-import numpy as np
 
 from kavian.eda.config import FLOAT, NUM, CAT, DTYPE_PRIORITY
-from kavian import KavianError
-
+from kavian.eda.utils import subset_handler
 from kavian.eda._colors import color_thresholded_column, color_adversarial_column, color_outliers
-
 
 def _process_mode(dataframe: pd.DataFrame):
     """
@@ -48,23 +45,8 @@ def _process_memory(dataframe: pd.DataFrame):
         return f'{memory / kb ** 3:.2f} GB'
 
 
-def info(dataframe: pd.DataFrame, numerical=True, categorical=True, colored_output=True, subset=None):
-    if not categorical and not numerical:
-        raise KavianError(
-            "Neither categorical nor numerical features were supplied. Please include at least "
-            "one parameter for exploratory analysis."
-        )
-
-    if subset:
-        dataframe[subset]
-
-    if not categorical:
-        numerical = dataframe.select_dtypes(include=NUM)
-        dataframe = numerical
-
-    if not numerical:
-        categorical = dataframe.select_dtypes(include=CAT)
-        dataframe = categorical
+def info(dataframe: pd.DataFrame, colored_output=True, subset=None):
+    dataframe = subset_handler(dataframe, subset)
 
     # Sort features
     features = sorted(dataframe.columns, key=lambda col: DTYPE_PRIORITY[dataframe[col].dtype.name])
@@ -107,10 +89,7 @@ def info(dataframe: pd.DataFrame, numerical=True, categorical=True, colored_outp
     return analysis
 
 
-def describe(dataframe: pd.DataFrame, categorical=False, colored_output=True, subset=None):
-    if subset:
-        dataframe = dataframe[subset]
-
+def describe(dataframe: pd.DataFrame, categorical=False, colored_output=True):
     if not categorical:
         dataframe = dataframe.select_dtypes(include=NUM)
         sorted_features = sorted(dataframe.columns, key=lambda col: DTYPE_PRIORITY[dataframe[col].dtype.name])
@@ -138,6 +117,7 @@ def describe(dataframe: pd.DataFrame, categorical=False, colored_output=True, su
             analysis = analysis.style
 
         analysis = analysis.format('{:.3f}')
+
     else:
         dataframe = dataframe.select_dtypes(include=CAT)
         sorted_features = sorted(dataframe.columns, key=lambda col: DTYPE_PRIORITY[dataframe[col].dtype.name])

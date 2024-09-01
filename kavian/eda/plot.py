@@ -5,7 +5,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 
 from kavian.eda.config import NUM, CAT
-from kavian import KavianError
+from kavian.eda.utils import subset_handler
 
 sns.set_style('whitegrid')
 
@@ -33,33 +33,12 @@ def _barplot_framework(ax, title):
         bar.set_edgecolor('black')
 
 
-def _subset_handler(dataframe, subset):
-    if subset is None:
-        return dataframe
-
-    if isinstance(subset, list) or isinstance(subset, pd.Index):
-        subset = subset
-    elif subset == 'numerical':
-        subset = dataframe.select_dtypes(include=NUM).columns
-    elif subset == 'categorical':
-        subset = dataframe.select_dtypes(include=CAT).columns
-    else:
-        raise KavianError(
-            "Subset parameter must be set to one of 'numerical', 'categorical', " +
-            f"or a list or pandas index object containing desired columns. Got: {subset} instead."
-        )
-
-    dataframe = dataframe[subset]
-
-    return dataframe
-
-
 def mode_barplot(dataframe, palette='kavian', subset=None, sort=True):
     """
     Plots the percentages of the most common value in each column.
     """
 
-    dataframe = _subset_handler(dataframe, subset)
+    dataframe = subset_handler(dataframe, subset)
 
     mode_percents = []
     size = len(dataframe)
@@ -110,7 +89,7 @@ def null_barplot(dataframe, palette='kavian', subset=None, sort=True):
     Plots the percentages of the missing values in the dataframe.
     """
 
-    dataframe = _subset_handler(dataframe, subset)
+    dataframe = subset_handler(dataframe, subset)
 
     missing_series = dataframe.isna().sum()
     missing_series = missing_series[missing_series > 0] / len(dataframe) * 100
@@ -155,7 +134,7 @@ def eda_barplot(dataframe, palette='kavian', subset=None):
     column and the missing values in the dataframe.
     """
     dataframe_copy = dataframe.copy()
-    dataframe_copy = _subset_handler(dataframe, subset)
+    dataframe_copy = subset_handler(dataframe, subset)
 
     null_cols = dataframe_copy.columns[dataframe_copy.isna().any()].tolist()
     non_null_cols = dataframe_copy.columns.difference(null_cols).tolist()

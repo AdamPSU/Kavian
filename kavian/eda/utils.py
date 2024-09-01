@@ -4,7 +4,7 @@ from kavian import KavianError
 from kavian.eda.config import NUM, CAT
 
 
-def _subset_handler(dataframe, subset):
+def subset_handler(dataframe, subset):
     if subset is None:
         return dataframe
 
