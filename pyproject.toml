@@ -1,0 +1,31 @@
+[project]
+name = "kavian"
+version = "0.2.0"
+description = "Python statistical modeling toolkit with built-in Pandas and Scikit-Learn integration"
+authors = [
+    { name = "Adam Torres Encarnacion", email = "art5809@psu.edu" },
+]
+license = { text = "MIT" }
+readme = "README.md"
+classifiers=[
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "pandas",
+    "scikit-learn",
+    "rich",
+    "pytest",
+    "statsmodels",
+    "scipy"
+]
+
+[project.urls]
+repository = "https://github.com/AdamPSU/Kavian"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
