@@ -1,7 +1,7 @@
 import numpy as np
 
 from rich.panel import Panel
-from kavian.tables.base import BaseRegressorSummary, BaseClassifierSummary
+from kavian.tables.base import BaseRegressorSummary, BaseBinaryClassifierSummary
 from kavian.tables.utils import format_stat
 
 class RegularizedRegressorSummary(BaseRegressorSummary):
@@ -46,7 +46,7 @@ class RegularizedRegressorSummary(BaseRegressorSummary):
         return zeros
 
 
-class BinaryClassifierSummary(BaseClassifierSummary):
+class BinaryClassifierSummary(BaseBinaryClassifierSummary):
     def __init__(self, estimator, X, y):
         super().__init__(estimator, X, y)
 

@@ -7,7 +7,6 @@ from rich.panel import Panel
 
 from kavian.tables.base import (
     BaseRegressorSummary,
-    BaseClassifierSummary,
     SimpleRegressorSummary,
     SimpleClassifierSummary
 )
@@ -53,10 +52,11 @@ def test_compatibility(get_diabetes, get_breast_cancer):
 
 def test_too_many_entries():
     with (pytest.raises(ValueError)):
-        test = TooManyEntriesSummary(LinearRegression(), X_RANDOM, Y_RANDOM)
+        model = LinearRegression()
+        model.fit(X_RANDOM, Y_RANDOM)
+
+        test = TooManyEntriesSummary(model, X_RANDOM, Y_RANDOM)
         test.summary()
-
-
 
 
 
