@@ -128,7 +128,7 @@ def null_barplot(dataframe, palette='kavian', subset=None, sort=True):
     plt.tight_layout()
     plt.show()
 
-def eda_barplot(dataframe, palette='kavian', subset=None):
+def mode_null_barplot(dataframe, palette='kavian', subset=None):
     """
     Plots the percentages of both the most common value in each
     column and the missing values in the dataframe.
