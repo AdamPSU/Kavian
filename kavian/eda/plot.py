@@ -302,7 +302,7 @@ def numerical_plot(col, palette='kavian', flip_colors=False):
         sns.histplot(color=palette[1], **histplot_params)
         sns.boxplot(color=palette[0], **boxplot_params)
 
-    # Histplot params
+    # Histplot
     axes[0].tick_params(axis='y', rotation=20)
     axes[0].set_yticklabels(axes[0].get_yticklabels(), fontweight='bold', fontstyle='italic')
     axes[0].set_ylabel('Count', fontstyle='italic', size=16, fontfamily='serif')
@@ -313,15 +313,16 @@ def numerical_plot(col, palette='kavian', flip_colors=False):
     axes[0].set_xticklabels(labels, fontstyle='italic')
     axes[0].set_xlabel('')
 
-    text_params = {'x': 0.66,
+    # Add relevant statistics to the histplot graph
+    text_params = {'x': 0.50,
                    'transform': axes[0].transAxes,
                    'fontdict': {'weight': 'bold', 'style': 'italic'},
                    'bbox': {'facecolor': 'white', 'edgecolor': palette[1], 'boxstyle': 'roundtooth'}}
 
-    axes[0].text(y=0.95, s=f"Skewness: {col.skew():.2f}", **text_params)
-    axes[0].text(y=0.90, s=f"Null Count: {col.isna().sum()}", **text_params)
+    axes[0].text(y=0.93, s=f"Skewness: {col.skew():.2f}", **text_params)
+    axes[0].text(y=0.87, s=f"Null Count: {col.isna().sum()}", **text_params)
 
-    # Boxplot params
+    # Boxplot
     axes[1].set_xticklabels(axes[1].get_xticklabels(), fontstyle='italic')
     axes[1].axvline(col.median(), color="black", linewidth=2, dashes=(2, 2))
     axes[1].set_xlabel('')
@@ -330,5 +331,13 @@ def numerical_plot(col, palette='kavian', flip_colors=False):
     plt.tight_layout()
     plt.show()
 
+
+def gen_numerical_plots(dataframe, palette='kavian'):
+    numerical = dataframe.select_dtypes(include=NUM)
+
+    flip_switch = False
+    for col in numerical:
+        numerical_plot(numerical[col], palette=palette, flip_colors=flip_switch)
+        flip_switch = not flip_switch
 
 
