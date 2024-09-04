@@ -236,4 +236,99 @@ def heatmap(dataframe, palette='kavian', subset=None):
     plt.show()
 
 
+def _format_chart_data(col):
+    min_val = col.min()
+    median_val = col.median()
+    max_val = col.max()
+
+    # Check if median is too close to min or max
+    min_max_distance = max_val - min_val
+    if abs(median_val - min_val) <= 0.15 * min_max_distance or \
+            abs(median_val - max_val) <= 0.15 * min_max_distance:
+
+        ticks = [min_val, max_val]
+        labels = [_format_value(min_val), _format_value(max_val)]
+        labels = [f'{min_val:.2f}', f'{max_val:.2f}']
+
+    else:
+        ticks = [min_val, median_val, max_val]
+        labels = [_format_value(min_val), _format_value(median_val), _format_value(max_val)]
+
+    return ticks, labels
+
+
+def _format_value(value):
+    if abs(value) >= 100_000:
+        exponent = int(np.log10(abs(value)))
+        mantissa = value / 10 ** exponent
+
+        return f'{mantissa:.0f}x10^{exponent}'
+    else:
+
+        return f'{value:.0f}'
+
+
+def numerical_plot(col, palette='kavian', flip_colors=False):
+    sns.set_style('ticks')
+
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 6), sharex=True)
+
+    if palette == 'kavian':
+        palette = ['#17aab5', '#e85440']
+
+    histplot_params = {'x': col,
+                       'ax': axes[0],
+                       'kde': True,
+                       'line_kws': {'linewidth': 2},
+                       'fill': False,
+                       }
+
+    boxplot_params = {'x': col,
+                      'ax': axes[1],
+                      'notch': True,
+                      'linewidth': 2,
+                      'width': 0.2,
+                      'boxprops': {'edgecolor': 'black'},
+                      'medianprops': {'color': 'black'},
+                      'whiskerprops': {'color': 'black'},
+                      'capprops': {'color': 'black'},
+                      'flierprops': {'marker': 'x'},
+                      }
+
+    if not flip_colors:
+        sns.histplot(color=palette[0], **histplot_params)
+        sns.boxplot(color=palette[1], **boxplot_params)
+    else:
+        sns.histplot(color=palette[1], **histplot_params)
+        sns.boxplot(color=palette[0], **boxplot_params)
+
+    # Histplot params
+    axes[0].tick_params(axis='y', rotation=20)
+    axes[0].set_yticklabels(axes[0].get_yticklabels(), fontweight='bold', fontstyle='italic')
+    axes[0].set_ylabel('Count', fontstyle='italic', size=16, fontfamily='serif')
+
+    ticks, labels = _format_chart_data(col)
+
+    axes[0].set_xticks(ticks)
+    axes[0].set_xticklabels(labels, fontstyle='italic')
+    axes[0].set_xlabel('')
+
+    text_params = {'x': 0.66,
+                   'transform': axes[0].transAxes,
+                   'fontdict': {'weight': 'bold', 'style': 'italic'},
+                   'bbox': {'facecolor': 'white', 'edgecolor': palette[1], 'boxstyle': 'roundtooth'}}
+
+    axes[0].text(y=0.95, s=f"Skewness: {col.skew():.2f}", **text_params)
+    axes[0].text(y=0.90, s=f"Null Count: {col.isna().sum()}", **text_params)
+
+    # Boxplot params
+    axes[1].set_xticklabels(axes[1].get_xticklabels(), fontstyle='italic')
+    axes[1].axvline(col.median(), color="black", linewidth=2, dashes=(2, 2))
+    axes[1].set_xlabel('')
+
+    plt.suptitle(f'{col.name} Distribution Analysis', size=24, fontfamily='serif')
+    plt.tight_layout()
+    plt.show()
+
+
 
