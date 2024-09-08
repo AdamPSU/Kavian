@@ -341,3 +341,51 @@ def gen_numerical_plots(dataframe, palette='kavian'):
         flip_switch = not flip_switch
 
 
+def categorical_plot(col, palette='kavian', flip_colors=False):
+    sns.set_style('ticks')
+
+    fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 6))
+
+    if palette == 'kavian':
+        palette = ['#17aab5', '#e85440']
+
+    # Pie chart parameters
+    pie_data = col.value_counts()
+
+    # Function to customize percentage text
+    def custom_autopct(pct):
+        return f'%1.1f%%' % pct  # Customize how percentages are shown
+
+    # Create the pie chart
+    wedges, texts, autotexts = axes[0].pie(
+        pie_data,
+        labels=pie_data.index,
+        colors=palette if not flip_colors else palette[::-1],
+        autopct=custom_autopct,
+        startangle=90,
+        wedgeprops={'edgecolor': 'black', 'linewidth': 2},  # Increased edge color width
+    )
+
+    # Add a black box around the category labels (texts)
+    for text in texts:
+        text.set_bbox(dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
+        text.set_fontweight('bold')
+
+    # Customize the percentage color (autotexts)
+    for autotext in autotexts:
+        autotext.set_color('white')
+        autotext.set_fontweight('bold')
+
+    # Create the countplot on the right (axes[1])
+    sns.countplot(x=col, palette=palette if not flip_colors else palette[::-1], ax=axes[1], edgecolor='black')
+
+    axes[1].set_ylabel('Count', fontsize=12)
+    axes[1].set_xlabel('')
+    axes[1].yaxis.tick_right()
+    axes[1].yaxis.set_label_position('right')
+
+    plt.suptitle(f'{col.name} Distribution Analysis', size=24, fontfamily='serif')
+    plt.tight_layout()
+    plt.show()
+
+
