@@ -14,6 +14,7 @@ def _barplot_framework(ax, title):
     General styles such as titles, axis formatting, and
     labeling present in all Kavian barplots.
     """
+
     ax.xaxis.grid(True, linestyle='--', which='major', color='black', alpha=0.10)
     ax.axvline(50, color='black', alpha=0.10)
     ax.tick_params(axis='y', rotation=20)
@@ -38,12 +39,14 @@ def mode_barplot(dataframe, palette='kavian', subset=None, sort=True):
     Plots the percentages of the most common value in each column.
     """
 
+    # Takes a subset of the dataframe if supplied
     dataframe = subset_handler(dataframe, subset)
 
     mode_percents = []
     size = len(dataframe)
 
     for col in dataframe:
+        # Process the mode of each column
         mode_size = dataframe[col].value_counts().iloc[0]
         mode_percent = mode_size / size * 100
 
@@ -64,10 +67,13 @@ def mode_barplot(dataframe, palette='kavian', subset=None, sort=True):
     sns.barplot(data=mode_df, x='Mode %', y='Feature', orient='h',
                 palette=palette, ax=ax)
 
+    # Apply common styles for barplots
     _barplot_framework(ax, 'Mode%')
 
     annot = True
     if len(mode_df) > 15:
+        # Too many columns for annotations
+
         annot = False
 
     if annot:
@@ -75,6 +81,8 @@ def mode_barplot(dataframe, palette='kavian', subset=None, sort=True):
         large_percents = [f'{p:.2f}%' if p >= 50 else '' for p in mode_df['Mode %']]
 
         for container in ax.containers:
+            # General styling
+
             ax.bar_label(container, labels=small_percents,
                          padding=5, color='black', fontweight='bold', fontstyle='italic')
             ax.bar_label(container, labels=large_percents,
@@ -89,6 +97,7 @@ def null_barplot(dataframe, palette='kavian', subset=None, sort=True):
     Plots the percentages of the missing values in the dataframe.
     """
 
+    # Takes a subset of the dataframe if supplied
     dataframe = subset_handler(dataframe, subset)
 
     missing_series = dataframe.isna().sum()
@@ -109,10 +118,13 @@ def null_barplot(dataframe, palette='kavian', subset=None, sort=True):
     sns.barplot(data=missing_df, x='Null %', y='Feature', orient='h',
                 palette=palette, ax=ax)
 
+    # Apply common styles for barplots
     _barplot_framework(ax, 'Null%')
 
     annot = True
     if len(missing_df) > 15:
+        # Too many columns for annotations
+
         annot = False
 
     if annot:
@@ -120,6 +132,8 @@ def null_barplot(dataframe, palette='kavian', subset=None, sort=True):
         large_percents = [f'{p:.2f}%' if p >= 10 else '' for p in missing_df['Null %']]
 
         for container in ax.containers:
+            # General styling
+
             ax.bar_label(container, labels=small_percents,
                          padding=5, color='black', fontweight='bold', fontstyle='italic')
             ax.bar_label(container, labels=large_percents,
@@ -133,7 +147,10 @@ def mode_null_barplot(dataframe, palette='kavian', subset=None):
     Plots the percentages of both the most common value in each
     column and the missing values in the dataframe.
     """
+
     dataframe_copy = dataframe.copy()
+
+    # Takes a subset of the dataframe if supplied
     dataframe_copy = subset_handler(dataframe, subset)
 
     null_cols = dataframe_copy.columns[dataframe_copy.isna().any()].tolist()
@@ -145,6 +162,8 @@ def mode_null_barplot(dataframe, palette='kavian', subset=None):
     mode_percents = []
     size = len(dataframe_copy)
     for col in dataframe_copy:
+        # Process mode for each column
+
         mode_size = dataframe_copy[col].value_counts().iloc[0]
         mode_percent = mode_size / size * 100
         mode_percents.append(mode_percent)
@@ -155,6 +174,7 @@ def mode_null_barplot(dataframe, palette='kavian', subset=None):
         'Mode %': mode_percents
     })
 
+    # Melt this dataframe for graphical facilitation
     melted_df = combined_df.melt(id_vars='Feature', value_vars=['Null %', 'Mode %'], var_name='Metric',
                                  value_name='Percent')
 
@@ -165,13 +185,18 @@ def mode_null_barplot(dataframe, palette='kavian', subset=None):
     sns.barplot(data=melted_df, x='Percent', y='Feature', hue='Metric',
                 orient='h', palette=palette, ax=ax)
 
+    # Apply common styles for barplots
     _barplot_framework(ax, 'EDA')
 
     annot = True
     if len(combined_df) > 8:
+        # Too many columns for annotations
+
         annot = False
 
     if annot:
+        # General styling
+
         for i, container in enumerate(ax.containers):
             small_percents, large_percents = [], []
 
@@ -198,14 +223,21 @@ def mode_null_barplot(dataframe, palette='kavian', subset=None):
 
 
 def heatmap(dataframe, palette='kavian', subset=None):
+    """
+    Create a heatmap of a numerical dataframe. If a
+    non-numerical dataframe is supplied (has non-numeric column types),
+    then data is automatically subsetted.
+    """
+
     if subset:
         dataframe = dataframe[subset]
 
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    numerical = dataframe.select_dtypes(NUM)
+    numerical = dataframe.select_dtypes(NUM) # Heatmaps only work with numerical data
     corr = numerical.corr()
 
+    # Dynamically resize the font depending on number of columns
     font_size = 18 - len(numerical.columns)
     font_size = 8 if font_size < 8 else font_size
     cbar_kws = {'pad': 0.01}
@@ -215,8 +247,8 @@ def heatmap(dataframe, palette='kavian', subset=None):
 
     too_many_cols = len(numerical.columns) >= 12
 
-    # Too many values for annotations to be legible
     if too_many_cols:
+        # Too many values for annotations to be legible
         sns.heatmap(corr, ax=ax, cmap=palette, cbar_kws=cbar_kws,
                     fmt='.2f', linecolor='black', linewidth=0.5, square=True)
 
@@ -225,6 +257,7 @@ def heatmap(dataframe, palette='kavian', subset=None):
         sns.heatmap(corr, ax=ax, cmap=palette, annot=True, annot_kws=annot_kws,
                     cbar_kws=cbar_kws, fmt='.2f', linecolor='black', linewidth=0.5, square=True)
 
+    # General styling
     xticklabels = '' if too_many_cols else ax.get_xticklabels()
 
     ax.tick_params(rotation=20)
@@ -236,7 +269,28 @@ def heatmap(dataframe, palette='kavian', subset=None):
     plt.show()
 
 
+def _format_value(value):
+    """
+    Helper function to scale the ticks in the x-axis
+    in case they are too big.
+    """
+
+    if abs(value) >= 100_000:
+        exponent = int(np.log10(abs(value)))
+        mantissa = value / 10 ** exponent
+
+        return f'{mantissa:.0f}x10^{exponent}'
+    else:
+
+        return f'{value:.2f}'
+
+
 def _format_chart_data(col):
+    """
+    Helper function to generate styles
+    for the tickmarks in a distribution chart.
+    """
+
     min_val = col.min()
     median_val = col.median()
     max_val = col.max()
@@ -247,9 +301,8 @@ def _format_chart_data(col):
             abs(median_val - max_val) <= 0.15 * min_max_distance:
 
         ticks = [min_val, max_val]
+        # Remove median, values are too close together
         labels = [_format_value(min_val), _format_value(max_val)]
-        labels = [f'{min_val:.2f}', f'{max_val:.2f}']
-
     else:
         ticks = [min_val, median_val, max_val]
         labels = [_format_value(min_val), _format_value(median_val), _format_value(max_val)]
@@ -257,18 +310,13 @@ def _format_chart_data(col):
     return ticks, labels
 
 
-def _format_value(value):
-    if abs(value) >= 100_000:
-        exponent = int(np.log10(abs(value)))
-        mantissa = value / 10 ** exponent
-
-        return f'{mantissa:.0f}x10^{exponent}'
-    else:
-
-        return f'{value:.0f}'
-
-
 def numerical_plot(col, palette='kavian', flip_colors=False):
+    """
+    Generate numerical plots for a single column in a dataframe.
+    Specifically, plots generated are a histogram (with KDE enabled)
+    and a boxplot of the column.
+    """
+
     sns.set_style('ticks')
 
     fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 6), sharex=True)
@@ -333,6 +381,14 @@ def numerical_plot(col, palette='kavian', flip_colors=False):
 
 
 def gen_numerical_plots(dataframe, palette='kavian'):
+    """
+    Apply numerical plot analysis for each numerical column
+    in a dataframe. Each plot shown will contain a histogram
+    and a boxplot. If there is more than one numerical column
+    present in the dataframe, colors will alternate every new
+    plot.
+    """
+
     numerical = dataframe.select_dtypes(include=NUM)
 
     flip_switch = False
@@ -342,6 +398,12 @@ def gen_numerical_plots(dataframe, palette='kavian'):
 
 
 def categorical_plot(col, palette='kavian', flip_colors=False):
+    """
+    Generate categorical plots for a single column in a dataframe.
+    Specifically, plots generated are a pie chart and countplot
+    of the column supplied.
+    """
+
     sns.set_style('ticks')
 
     fig, axes = plt.subplots(nrows=1, ncols=2, figsize=(10, 6))
@@ -363,10 +425,10 @@ def categorical_plot(col, palette='kavian', flip_colors=False):
         colors=palette if not flip_colors else palette[::-1],
         autopct=custom_autopct,
         startangle=90,
-        wedgeprops={'edgecolor': 'black', 'linewidth': 2},  # Increased edge color width
+        wedgeprops={'edgecolor': 'black', 'linewidth': 2},
     )
 
-    # Add a black box around the category labels (texts)
+    # Add a black box around the category labels
     for text in texts:
         text.set_bbox(dict(facecolor='white', edgecolor='black', boxstyle='round,pad=0.3'))
         text.set_fontweight('bold')
